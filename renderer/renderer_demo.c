@@ -1,0 +1,26 @@
+#include <stdio.h>
+#include "include/renderer.h"  // Adjust path to your renderer.h file
+
+int main() {
+    // Create the renderer (window)
+    void* renderer = create_renderer(800, 600, "Test Renderer");
+
+    if (renderer == NULL) {
+        printf("Failed to create renderer\n");
+        return -1;
+    }
+
+    while (!window_should_close(renderer)) {
+        clear_screen(renderer, 123.0f, 0.0f, 0.0f, 1.0f);
+
+        draw_rectangle(renderer, 100.0f, 100.0f, 200.0f, 100.0f, 0.0f, 234.0f, 0.0f, 1.0f);
+
+        present_screen(renderer);
+        
+        // TODO: Handle events (e.g., keyboard, mouse) here
+        // glfwPollEvents();
+    }
+
+    destroy_renderer(renderer);
+    return 0;
+}
