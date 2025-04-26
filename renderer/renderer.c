@@ -36,32 +36,32 @@ void* create_renderer(int width, int height, const char* title) {
 }
 
 // Clear the screen with a color (RGBA)
-void clear_screen(void* renderer, float r, float g, float b, float a) {
+void clear_screen(void* renderer, ColorRGBA color) {
     if (!renderer) return;
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Clearing screen with color: %f, %f, %f, %f\n", r, g, b, a);  // Debug log
+    printf("Clearing screen with color: %f, %f, %f, %f\n", color.r, color.g, color.b, color.a);  // Debug log
 
-    glClearColor(r, g, b, a);
+    glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
 // Draw a rectangle (RGBA)
-void draw_rectangle(void* renderer, float x, float y, float width, float height, float r, float g, float b, float a) {
+void draw_rectangle(void* renderer, Rect rect, ColorRGBA color) {
     if (!renderer) return;
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing rectangle at (%f, %f), width: %f, height: %f\n", x, y, width, height);  // Debug log
+    printf("Drawing rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
-    glColor4f(r, g, b, a);
+    glColor4f(color.r, color.g, color.b, color.a);
 
     glBegin(GL_QUADS);
-    glVertex2f(x, y);
-    glVertex2f(x + width, y);
-    glVertex2f(x + width, y + height);
-    glVertex2f(x, y + height);
+    glVertex2f(rect.position.x, rect.position.y); // Bottom-left
+    glVertex2f(rect.position.x + rect.width, rect.position.y); // Bottom-right
+    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Top-right
+    glVertex2f(rect.position.x, rect.position.y + rect.height); // Top-left
     glEnd();
 }
 
@@ -93,4 +93,13 @@ void destroy_renderer(void* renderer) {
         free(ctx);
     }
     glfwTerminate();
+}
+
+void handle_events(void* renderer) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+
+    glfwPollEvents();  // Poll for and process events
 }

@@ -11,9 +11,9 @@ int main() {
     }
 
     while (!window_should_close(renderer)) {
-        clear_screen(renderer, 123.0f, 0.0f, 0.0f, 1.0f);
+        clear_screen(renderer, (ColorRGBA){0.0f, 0.0f, 0.0f, 1.0f}); // Clear screen with black
 
-        draw_rectangle(renderer, 100.0f, 100.0f, 200.0f, 100.0f, 0.0f, 234.0f, 0.0f, 1.0f);
+        draw_rectangle(renderer, (Rect){(Vec2){100, 100}, 200, 150}, (ColorRGBA){1.0f, 0.0f, 0.0f, 1.0f}); // Draw red rectangle
 
         present_screen(renderer);
         

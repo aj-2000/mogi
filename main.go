@@ -24,10 +24,25 @@ func main() {
 		return
 	}
 
+	// Create color structure
+	bgColor := C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0}
+	rectColor := C.ColorRGBA{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
+
+	// Create rectangle structure
+	rect := C.Rect{
+		position: C.Vec2{x: 100.0, y: 100.0},
+		width:    200.0,
+		height:   100.0,
+	}
+
 	for C.window_should_close(renderer) == 0 {
-		C.clear_screen(renderer, 0.0, 0.0, 0.0, 1.0)
-		C.draw_rectangle(renderer, 100.0, 100.0, 200.0, 100.0, 1.0, 0.0, 0.0, 1.0)
+		C.clear_screen(renderer, bgColor)
+		C.draw_rectangle(renderer, rect, rectColor)
 		C.present_screen(renderer)
+
+		// Don't forget to process events
+		C.handle_events(renderer)
+
 		time.Sleep(16 * time.Millisecond)
 	}
 
