@@ -17,8 +17,7 @@ int main() {
 
         present_screen(renderer);
         
-        // TODO: Handle events (e.g., keyboard, mouse) here
-        // glfwPollEvents();
+        handle_events(renderer);
     }
 
     destroy_renderer(renderer);

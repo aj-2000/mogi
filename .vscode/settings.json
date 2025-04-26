@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "stb_truetype.h": "c",
+        "glad.h": "c"
+    }
+}
