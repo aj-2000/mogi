@@ -7,6 +7,9 @@ package main
 */
 import "C"
 import (
+	"GoUI/common"
+	"GoUI/consts"
+	"GoUI/examples"
 	"fmt"
 	"runtime"
 	"unsafe"
@@ -16,184 +19,18 @@ func init() {
 	runtime.LockOSThread()
 }
 
-// different colors
-var ColorRed = C.ColorRGBA{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
-var ColorGreen = C.ColorRGBA{r: 0.0, g: 1.0, b: 0.0, a: 1.0}
-var ColorBlue = C.ColorRGBA{r: 0.0, g: 0.0, b: 1.0, a: 1.0}
-var ColorWhite = C.ColorRGBA{r: 1.0, g: 1.0, b: 1.0, a: 1.0}
-var ColorBlack = C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0}
-var ColorYellow = C.ColorRGBA{r: 1.0, g: 1.0, b: 0.0, a: 1.0}
-var ColorCyan = C.ColorRGBA{r: 0.0, g: 1.0, b: 1.0, a: 1.0}
-var ColorMagenta = C.ColorRGBA{r: 1.0, g: 0.0, b: 1.0, a: 1.0}
-var ColorGray = C.ColorRGBA{r: 0.5, g: 0.5, b: 0.5, a: 1.0}
-var ColorDarkGray = C.ColorRGBA{r: 0.25, g: 0.25, b: 0.25, a: 1.0}
-var ColorLightGray = C.ColorRGBA{r: 0.75, g: 0.75, b: 0.75, a: 1.0}
-var ColorOrange = C.ColorRGBA{r: 1.0, g: 0.5, b: 0.0, a: 1.0}
-var ColorPurple = C.ColorRGBA{r: 0.5, g: 0.0, b: 1.0, a: 1.0}
-var ColorPink = C.ColorRGBA{r: 1.0, g: 0.0, b: 0.5, a: 1.0}
-var ColorBrown = C.ColorRGBA{r: 0.5, g: 0.25, b: 0.0, a: 1.0}
-var ColorGold = C.ColorRGBA{r: 1.0, g: 0.84, b: 0.0, a: 1.0}
-var ColorSilver = C.ColorRGBA{r: 0.75, g: 0.75, b: 0.75, a: 1.0}
-var ColorTeal = C.ColorRGBA{r: 0.0, g: 0.5, b: 0.5, a: 1.0}
-var ColorNavy = C.ColorRGBA{r: 0.0, g: 0.0, b: 0.5, a: 1.0}
-var ColorOlive = C.ColorRGBA{r: 0.5, g: 0.5, b: 0.0, a: 1.0}
-var ColorMaroon = C.ColorRGBA{r: 0.5, g: 0.0, b: 0.0, a: 1.0}
-var ColorLime = C.ColorRGBA{r: 0.0, g: 1.0, b: 0.0, a: 1.0}
-var ColorAqua = C.ColorRGBA{r: 0.0, g: 1.0, b: 1.0, a: 1.0}
-var ColorFuchsia = C.ColorRGBA{r: 1.0, g: 0.0, b: 1.0, a: 1.0}
-var ColorCoral = C.ColorRGBA{r: 1.0, g: 0.5, b: 0.31, a: 1.0}
-var ColorKhaki = C.ColorRGBA{r: 0.94, g: 0.9, b: 0.55, a: 1.0}
-var ColorSalmon = C.ColorRGBA{r: 0.98, g: 0.5, b: 0.45, a: 1.0}
-var ColorPeach = C.ColorRGBA{r: 1.0, g: 0.8, b: 0.65, a: 1.0}
-var ColorMint = C.ColorRGBA{r: 0.68, g: 1.0, b: 0.68, a: 1.0}
-var ColorPlum = C.ColorRGBA{r: 0.87, g: 0.63, b: 0.87, a: 1.0}
-var ColorSlate = C.ColorRGBA{r: 0.44, g: 0.5, b: 0.56, a: 1.0}
-var ColorSteel = C.ColorRGBA{r: 0.27, g: 0.51, b: 0.71, a: 1.0}
-var ColorIndigo = C.ColorRGBA{r: 0.29, g: 0.0, b: 0.51, a: 1.0}
-var ColorViolet = C.ColorRGBA{r: 0.93, g: 0.51, b: 0.93, a: 1.0}
-var ColorThistle = C.ColorRGBA{r: 0.85, g: 0.75, b: 0.85, a: 1.0}
-var ColorWheat = C.ColorRGBA{r: 0.96, g: 0.87, b: 0.7, a: 1.0}
-var ColorTan = C.ColorRGBA{r: 0.82, g: 0.71, b: 0.55, a: 1.0}
-var ColorChocolate = C.ColorRGBA{r: 0.82, g: 0.41, b: 0.12, a: 1.0}
-var ColorSienna = C.ColorRGBA{r: 0.65, g: 0.16, b: 0.16, a: 1.0}
-var ColorPeru = C.ColorRGBA{r: 0.8, g: 0.52, b: 0.25, a: 1.0}
-var ColorBurlywood = C.ColorRGBA{r: 0.87, g: 0.72, b: 0.53, a: 1.0}
-
-// UI container
-
-type PositionType int
-
-const (
-	PositionTypeAbsolute PositionType = iota
-	PositionTypeRelative
-)
-
-type Position struct {
-	X, Y float32
-	Type PositionType
-}
-
-type IComponent interface {
-	Type() ComponentType
-	Pos() Position
-	Size() Vec2
-	ID() string
-	Parent() IComponent
-	Children() []IComponent
-}
-
-type Component struct {
-	ComponentType ComponentType
-	Pos           Position
-	Size          Vec2
-	ID            string
-	Parent        IComponent
-	Children      []IComponent
-}
-
-type ComponentType int
-
-const (
-	TContainer ComponentType = iota
-	TText      ComponentType = iota
-	TButton    ComponentType = iota
-)
-
-type Vec2 struct {
-	X, Y float32
-}
-type Container struct {
-	Component
-}
-
-func (c *Container) Type() ComponentType {
-	return c.Component.ComponentType
-}
-
-func (c *Container) Pos() Position {
-	return c.Component.Pos
-}
-
-func (c *Container) Size() Vec2 {
-	return c.Component.Size
-}
-
-func (c *Container) ID() string {
-	return c.Component.ID
-}
-
-func (c *Container) Parent() IComponent {
-	return c.Component.Parent
-}
-
-func (c *Container) Children() []IComponent {
-	return c.Component.Children
-}
-
-type Text struct {
-	Component
-	Text string
-}
-
-func (t *Text) Type() ComponentType {
-	return t.Component.ComponentType
-}
-
-func (t *Text) Pos() Position {
-	return t.Component.Pos
-}
-
-func (t *Text) Size() Vec2 {
-	return t.Component.Size
-}
-
-func (t *Text) ID() string {
-	return t.Component.ID
-}
-
-func (t *Text) Parent() IComponent {
-	return t.Component.Parent
-}
-
-func (t *Text) Children() []IComponent {
-	return t.Component.Children
-}
-
-type Button struct {
-	Component
-	Text      string
-	Callback  func()
-	Pressed   bool
-	Released  bool
-	MouseOver bool
-}
-
-func (b *Button) Type() ComponentType {
-	return b.Component.ComponentType
-}
-
-func (b *Button) Pos() Position {
-	return b.Component.Pos
-}
-
-func (b *Button) Size() Vec2 {
-	return b.Component.Size
-}
-
-func (b *Button) ID() string {
-	return b.Component.ID
-}
-
-func (b *Button) Parent() IComponent {
-	return b.Component.Parent
-}
-
-func (b *Button) Children() []IComponent {
-	return b.Component.Children
-}
-
 type ComponentRenderer struct {
-	Component IComponent
+	Component common.IComponent
+	Parent    common.IComponent
+}
+
+func goColortoCColorRGBA(color common.ColorRGBA) C.ColorRGBA {
+	return C.ColorRGBA{
+		r: C.float(color.R),
+		g: C.float(color.G),
+		b: C.float(color.B),
+		a: C.float(color.A),
+	}
 }
 
 func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
@@ -206,12 +43,12 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 	posVec2 := C.Vec2{x: 0, y: 0}
 
 	switch pos.Type {
-	case PositionTypeAbsolute:
+	case common.PositionTypeAbsolute:
 		posVec2.x = C.float(pos.X)
 		posVec2.y = C.float(pos.Y)
 	default:
-		if cr.Component.Parent() != nil {
-			parentPos := cr.Component.Parent().Pos()
+		if cr.Parent != nil {
+			parentPos := cr.Parent.Pos()
 			posVec2.x = C.float(parentPos.X + pos.X)
 			posVec2.y = C.float(parentPos.Y + pos.Y)
 		} else {
@@ -221,23 +58,25 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 	}
 
 	switch cr.Component.Type() {
-	case TContainer:
-		container, ok := cr.Component.(*Container)
+	case common.TContainer:
+		container, ok := cr.Component.(*common.Container)
 		if !ok {
 			return
 		}
-		C.draw_rectangle_filled(
+		// TODO: Add border radius and border width + only render if values are set
+		C.draw_rectangle_filled_outline(
 			renderer,
 			C.Rect{
 				position: posVec2,
 				width:    C.float(container.Size().X),
 				height:   C.float(container.Size().Y),
 			},
-			ColorGray,
+			goColortoCColorRGBA(container.BackgroundColor),
+			goColortoCColorRGBA(container.BorderColor),
 		)
 
-	case TText:
-		text, ok := cr.Component.(*Text)
+	case common.TText:
+		text, ok := cr.Component.(*common.Text)
 		if !ok {
 			return
 		}
@@ -250,11 +89,11 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 			font,
 			cstr,
 			posVec2,
-			ColorWhite,
+			goColortoCColorRGBA(consts.ColorWhite),
 		)
 
-	case TButton:
-		button, ok := cr.Component.(*Button)
+	case common.TButton:
+		button, ok := cr.Component.(*common.Button)
 		if !ok {
 			return
 		}
@@ -265,7 +104,7 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 				width:    C.float(button.Size().X),
 				height:   C.float(button.Size().Y),
 			},
-			ColorBlue,
+			goColortoCColorRGBA(consts.ColorBlue),
 		)
 		cstr := C.CString(button.Text)
 		defer C.free(unsafe.Pointer(cstr))
@@ -277,20 +116,20 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 			font,
 			cstr,
 			pos,
-			ColorWhite,
+			goColortoCColorRGBA(consts.ColorWhite),
 		)
 	}
 
 	if cr.Component.Children() != nil {
 		for _, child := range cr.Component.Children() {
-			childRenderer := &ComponentRenderer{Component: child}
+			childRenderer := &ComponentRenderer{Component: child, Parent: cr.Component}
 			childRenderer.Render(renderer)
 		}
 	}
 }
 
 func main() {
-	renderer := C.create_renderer(C.int(800), C.int(600), C.CString("Go with C Renderer"))
+	renderer := C.create_renderer(C.int(800), C.int(800), C.CString("Go with C Renderer"))
 	defer C.destroy_renderer(renderer)
 	font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
 
@@ -366,52 +205,151 @@ func main() {
 		// }
 		// C.draw_line_dotted(renderer, line, ColorWhite, 2.0)
 
-		text := &Text{
-			Component: Component{
-				ComponentType: TText,
-				Pos:           Position{X: 10, Y: 10, Type: PositionTypeRelative},
-				Size:          Vec2{X: 180, Y: 30},
-				ID:            "text1",
-				Parent:        nil,
-				Children:      nil,
-			},
-			Text: "Hello, World!",
-		}
+		// text := &Text{
+		// 	Component: Component{
+		// 		ComponentType: TText,
+		// 		Pos:           Position{X: 10, Y: 10, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 180, Y: 30},
+		// 		ID:            "text1",
+		// 		Children:      nil,
+		// 	},
+		// 	Text: "Hello, World!",
+		// }
 
-		button := &Button{
-			Component: Component{
-				ComponentType: TButton,
-				Pos:           Position{X: 10, Y: 50, Type: PositionTypeRelative},
-				Size:          Vec2{X: 180, Y: 30},
-				ID:            "button1",
-				Parent:        nil,
-				Children:      nil,
-			},
-			Text:     "Click Me",
-			Callback: func() { fmt.Println("Button clicked!") },
-			Pressed:  false,
-			Released: false,
-		}
+		// button := &Button{
+		// 	Component: Component{
+		// 		ComponentType: TButton,
+		// 		Pos:           Position{X: 10, Y: 50, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 180, Y: 30},
+		// 		ID:            "button1",
+		// 		Children:      nil,
+		// 	},
+		// 	Text:     "Click Me",
+		// 	Callback: func() { fmt.Println("Button clicked!") },
+		// 	Pressed:  false,
+		// 	Released: false,
+		// }
 
-		container := &Container{
-			Component: Component{
-				ComponentType: TContainer,
-				Pos:           Position{X: 50, Y: 50},
-				Size:          Vec2{X: 200, Y: 200},
-				ID:            "container1",
-				Parent:        nil,
-				Children: []IComponent{
-					text,
-					button,
-				},
-			},
-		}
+		// containerOne := &Container{
+		// 	Component: Component{
+		// 		ComponentType: TContainer,
+		// 		Pos:           Position{X: 0, Y: 0, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 200, Y: 400},
+		// 		ID:            "continer_one",
+		// 		Children: []IComponent{
+		// 			text,
+		// 			button,
+		// 		},
+		// 	},
+		// 	BackgroundColor: ColorRed,
+		// 	BorderColor:     ColorDarkGray,
+		// 	BorderWidth:     2.0,
+		// 	BorderRadius:    10.0,
+		// }
 
-		text.Component.Parent = container
-		button.Component.Parent = container
+		// containerTwo := &Container{
+		// 	Component: Component{
+		// 		ComponentType: TContainer,
+		// 		Pos:           Position{X: 210, Y: 0, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 200, Y: 400},
+		// 		ID:            "continer_two",
+		// 		Children: []IComponent{
+		// 			text,
+		// 			button,
+		// 		},
+		// 	},
+		// 	BackgroundColor: ColorCyan,
+		// 	BorderColor:     ColorGold,
+		// 	BorderWidth:     2.0,
+		// 	BorderRadius:    10.0,
+		// }
+
+		// text2 := &Text{
+		// 	Component: Component{
+		// 		ComponentType: TText,
+		// 		Pos:           Position{X: 500, Y: 50, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 180, Y: 30},
+		// 		ID:            "text2",
+		// 		Children:      nil,
+		// 	},
+		// 	Text: "Fuck, Teri Beti Suckkkkkk!",
+		// }
+
+		// var children []IComponent
+
+		// Define text2, containerOne, and containerTwo before using them
+		// text2 := &Text{
+		// 	Component: Component{
+		// 		ComponentType: TText,
+		// 		Pos:           Position{X: 500, Y: 50, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 180, Y: 30},
+		// 		ID:            "text2",
+		// 		Children:      nil,
+		// 	},
+		// 	Text: "Hello, World!",
+		// }
+
+		// button := &Button{
+		// 	Component: Component{
+		// 		ComponentType: TButton,
+		// 		Pos:           Position{X: 10, Y: 50, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 180, Y: 30},
+		// 		ID:            "button1",
+		// 		Children:      nil,
+		// 	},
+		// 	Text:     "Click Me",
+		// 	Callback: func() { fmt.Println("Button clicked!") },
+		// 	Pressed:  false,
+		// 	Released: false,
+		// }
+
+		// text := &Text{
+		// 	Component: Component{
+		// 		ComponentType: TText,
+		// 		Pos:           Position{X: 10, Y: 10, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 180, Y: 30},
+		// 		ID:            "text1",
+		// 		Children:      nil,
+		// 	},
+		// 	Text: "Hello, World!",
+		// }
+
+		// containerOne := &Container{
+		// 	Component: Component{
+		// 		ComponentType: TContainer,
+		// 		Pos:           Position{X: 0, Y: 0, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 200, Y: 400},
+		// 		ID:            "container_one",
+		// 		Children: []IComponent{
+		// 			text,
+		// 			button,
+		// 		},
+		// 	},
+		// 	BackgroundColor: ColorRed,
+		// 	BorderColor:     ColorDarkGray,
+		// 	BorderWidth:     2.0,
+		// 	BorderRadius:    10.0,
+		// }
+
+		// containerTwo := &Container{
+		// 	Component: Component{
+		// 		ComponentType: TContainer,
+		// 		Pos:           Position{X: 210, Y: 0, Type: PositionTypeRelative},
+		// 		Size:          Vec2{X: 200, Y: 400},
+		// 		ID:            "container_two",
+		// 		Children: []IComponent{
+		// 			text,
+		// 			button,
+		// 		},
+		// 	},
+		// 	BackgroundColor: ColorCyan,
+		// 	BorderColor:     ColorGold,
+		// 	BorderWidth:     2.0,
+		// 	BorderRadius:    10.0,
+		// }
 
 		// render
-		componentRenderer := &ComponentRenderer{Component: container}
+		componentRenderer := &ComponentRenderer{Component: examples.ChessboardComponent()}
 		componentRenderer.Render(renderer)
 
 		C.present_screen(renderer)
@@ -423,6 +361,5 @@ func main() {
 	//component demo
 
 	// Set parent-child relationships
-
 	fmt.Println("Exiting")
 }
