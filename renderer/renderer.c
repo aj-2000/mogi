@@ -606,3 +606,12 @@ float get_delta_time(void* renderer) {
     last_time = current_time;
     return delta_time;
 }
+
+void set_vsync(void* renderer, int vsync) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+
+    glfwSwapInterval(vsync); // Enable or disable V-Sync
+}

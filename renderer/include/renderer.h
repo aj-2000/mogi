@@ -84,6 +84,7 @@ void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, 
 
 // get delta time
 float get_delta_time(void* renderer);
+void set_vsync(void* renderer, int vsync);
 
 #ifdef __cplusplus
 }

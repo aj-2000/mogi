@@ -76,6 +76,14 @@ func (app *App) GetFPS() float32 {
 	return float32(fps)
 }
 
+func (app *App) SetVSync(vsync bool) {
+	if vsync {
+		C.set_vsync(app.renderer, 1)
+	} else {
+		C.set_vsync(app.renderer, 0)
+	}
+}
+
 func (app *App) Destroy() {
 	if app.renderer != nil {
 		C.destroy_renderer(app.renderer)
@@ -92,10 +100,12 @@ func NewApp(title string, width int, height int) *App {
 	if renderer == nil {
 		log.Fatalln("Failed to create renderer")
 	}
-	return &App{
+	app := &App{
 		fonts:    make(map[string]*C.FontData),
 		renderer: renderer,
 	}
+	app.SetVSync(true)
+	return app
 }
 
 type ComponentRenderer struct {
