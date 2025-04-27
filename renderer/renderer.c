@@ -17,6 +17,24 @@ typedef struct {
 } Renderer;
 
 
+// Debug dprintf function - only prints if DEBUG is defined
+int dprintf(const char *format, ...) {
+    #ifdef DEBUG
+        va_list args;
+        int result;
+        
+        va_start(args, format);
+        result = vdprintf(format, args);
+        va_end(args);
+        
+        return result;
+    #else
+        // When DEBUG is not defined, do nothing but return 0
+        (void)format; // Prevents "unused parameter" warning
+        return 0;
+    #endif
+}
+
 // Create and initialize the renderer (window)
 void* create_renderer(int width, int height, const char* title) {
     if (!glfwInit()) {
@@ -44,10 +62,10 @@ void* create_renderer(int width, int height, const char* title) {
          return NULL;
     }
 
-    printf("OpenGL Version: %s\n", glGetString(GL_VERSION));
-    printf("GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-    printf("Renderer: %s\n", glGetString(GL_RENDERER));
-    printf("Vendor: %s\n", glGetString(GL_VENDOR));
+    dprintf("OpenGL Version: %s\n", glGetString(GL_VERSION));
+    dprintf("GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    dprintf("Renderer: %s\n", glGetString(GL_RENDERER));
+    dprintf("Vendor: %s\n", glGetString(GL_VENDOR));
 
 
     // Setup OpenGL for 2D rendering (orthogonal projection)
@@ -81,7 +99,7 @@ void clear_screen(void* renderer, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Clearing screen with color: %f, %f, %f, %f\n", color.r, color.g, color.b, color.a);  // Debug log
+    // dprintf("Clearing screen with color: %f, %f, %f, %f\n", color.r, color.g, color.b, color.a);  // Debug log
 
     glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -117,7 +135,7 @@ void destroy_renderer(void* renderer) {
         free(ctx);
     }
     glfwTerminate();
-    printf("Renderer destroyed.\n");
+    dprintf("Renderer destroyed.\n");
 }
 
 // Handle events (poll for and process events)
@@ -136,7 +154,7 @@ void draw_circle(void* renderer, Circle circle, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    dprintf("Drawing circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -161,7 +179,7 @@ void draw_circle_filled(void* renderer, Circle circle, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing filled circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    dprintf("Drawing filled circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -186,7 +204,7 @@ void draw_line_thick(void* renderer, Line line, ColorRGBA color, float thickness
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing thick line from (%f, %f) to (%f, %f) with thickness %f\n", line.start.x, line.start.y, line.end.x, line.end.y, thickness);  // Debug log
+    // dprintf("Drawing thick line from (%f, %f) to (%f, %f) with thickness %f\n", line.start.x, line.start.y, line.end.x, line.end.y, thickness);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -218,7 +236,7 @@ void draw_line_dashed(void* renderer, Line line, ColorRGBA color, float dash_len
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing dashed line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
+    // dprintf("Drawing dashed line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -254,7 +272,7 @@ void draw_circle_outline(void* renderer, Circle circle, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing circle outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    dprintf("Drawing circle outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -279,7 +297,7 @@ void draw_circle_filled_outline(void* renderer, Circle circle, ColorRGBA fill_co
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing filled circle with outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    dprintf("Drawing filled circle with outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Draw filled circle
     draw_circle_filled(renderer, circle, fill_color);
@@ -295,7 +313,7 @@ void draw_line_dotted(void* renderer, Line line, ColorRGBA color, float dot_radi
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing dotted line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
+    dprintf("Drawing dotted line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -327,7 +345,7 @@ void draw_rectangle_filled(void* renderer, Rect rect, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing filled rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+    dprintf("Drawing filled rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -347,7 +365,7 @@ void draw_rectangle_outline(void* renderer, Rect rect, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing rectangle outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+    dprintf("Drawing rectangle outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -367,7 +385,7 @@ void draw_rectangle_filled_outline(void* renderer, Rect rect, ColorRGBA fill_col
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing filled rectangle with outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+    dprintf("Drawing filled rectangle with outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
     // Draw filled rectangle
     draw_rectangle_filled(renderer, rect, fill_color);
@@ -482,7 +500,7 @@ FontData* load_font(const char* font_path, float font_height_pixels) {
     // Free the temporary bitmap buffer, we only need the OpenGL texture now
     free(temp_bitmap);
 
-    // printf("Font loaded successfully: %s (Texture ID: %u)\n", font_path, font_data->texture_id);
+    // dprintf("Font loaded successfully: %s (Texture ID: %u)\n", font_path, font_data->texture_id);
 
     return font_data;
 }
@@ -491,7 +509,7 @@ FontData* load_font(const char* font_path, float font_height_pixels) {
 void destroy_font(FontData* font_data) {
     if (!font_data) return;
 
-    printf("Destroying font (Texture ID: %u)\n", font_data->texture_id);
+    dprintf("Destroying font (Texture ID: %u)\n", font_data->texture_id);
     glDeleteTextures(1, &font_data->texture_id); // Delete the OpenGL texture
     free(font_data->ttf_buffer);                 // Free the font file buffer
     free(font_data);                              // Free the FontData struct itself
@@ -505,7 +523,7 @@ void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;
 
-    printf("Drawing text: '%s' at (%f, %f)\n", text, pos.x, pos.y);  // Debug log
+    dprintf("Drawing text: '%s' at (%f, %f)\n", text, pos.x, pos.y);  // Debug log
     
     // Enable texturing and bind the font atlas texture
     glEnable(GL_TEXTURE_2D);
@@ -580,7 +598,7 @@ float get_delta_time(void* renderer) {
     if (!renderer) return 0.0f; 
 
     Renderer* ctx = (Renderer*)renderer;
-    if (!ctx || !ctx->window) return 0.0f;
+    if (!ctx || !ctx->window) return 0.0f;  // Ensure the renderer is valid
     
     static double last_time = 0.0;
     double current_time = glfwGetTime();
