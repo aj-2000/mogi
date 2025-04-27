@@ -7,37 +7,70 @@
 
 #include "external/glad/glad.h"  // Include GLAD for OpenGL function loading
 #include "external/glfw/glfw3.h" // Include GLFW for window management
+
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "external/stb/stb_truetype.h" 
+#include "external/stb/stb_truetype.h"
 
 
 typedef struct {
     GLFWwindow* window;
 } Renderer;
 
+
 // Create and initialize the renderer (window)
 void* create_renderer(int width, int height, const char* title) {
     if (!glfwInit()) {
+        fprintf(stderr, "ERROR: Failed to initialize GLFW\n");
         return NULL; // Initialization failed
     }
 
+    // Request core profile if needed, but legacy works for this example
+    // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
     GLFWwindow* window = glfwCreateWindow(width, height, title, NULL, NULL);
     if (!window) {
+        fprintf(stderr, "ERROR: Failed to create GLFW window\n");
         glfwTerminate();
         return NULL; // Window creation failed
     }
 
     glfwMakeContextCurrent(window);
-    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+         fprintf(stderr, "ERROR: Failed to initialize GLAD\n");
+         glfwDestroyWindow(window);
+         glfwTerminate();
+         return NULL;
+    }
+
+    printf("OpenGL Version: %s\n", glGetString(GL_VERSION));
+    printf("GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    printf("Renderer: %s\n", glGetString(GL_RENDERER));
+    printf("Vendor: %s\n", glGetString(GL_VENDOR));
+
 
     // Setup OpenGL for 2D rendering (orthogonal projection)
+    glViewport(0, 0, width, height); // Set viewport
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(0.0, width, height, 0.0, -1.0, 1.0);  // 2D orthogonal projection matrix
+    // Origin at top-left: (0,0) top-left, (width, height) bottom-right
+    glOrtho(0.0, (double)width, (double)height, 0.0, -1.0, 1.0);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
+    // Enable alpha blending for text transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
     Renderer* renderer = (Renderer*)malloc(sizeof(Renderer));
+    if (!renderer) {
+        fprintf(stderr, "ERROR: Failed to allocate memory for Renderer\n");
+        glfwDestroyWindow(window);
+        glfwTerminate();
+        return NULL;
+    }
     renderer->window = window;
     return renderer;
 }
@@ -48,7 +81,7 @@ void clear_screen(void* renderer, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Clearing screen with color: %f, %f, %f, %f\n", color.r, color.g, color.b, color.a);  // Debug log
+    // printf("Clearing screen with color: %f, %f, %f, %f\n", color.r, color.g, color.b, color.a);  // Debug log
 
     glClearColor(color.r, color.g, color.b, color.a);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -60,15 +93,17 @@ void draw_rectangle(void* renderer, Rect rect, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+    // printf("Drawing rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
     glColor4f(color.r, color.g, color.b, color.a);
 
     glBegin(GL_QUADS);
-    glVertex2f(rect.position.x, rect.position.y); // Bottom-left
-    glVertex2f(rect.position.x + rect.width, rect.position.y); // Bottom-right
-    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Top-right
-    glVertex2f(rect.position.x, rect.position.y + rect.height); // Top-left
+    glVertex2f(rect.position.x, rect.position.y); // Top-left
+    glVertex2f(rect.position.x + rect.width, rect.position.y); // Top-right
+    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Bottom-right
+    glVertex2f(rect.position.x, rect.position.y + rect.height); // Bottom-left
     glEnd();
 }
 
@@ -96,10 +131,13 @@ void destroy_renderer(void* renderer) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (ctx) {
-        glfwDestroyWindow(ctx->window);
+        if (ctx->window) {
+            glfwDestroyWindow(ctx->window);
+        }
         free(ctx);
     }
     glfwTerminate();
+    printf("Renderer destroyed.\n");
 }
 
 // Handle events (poll for and process events)
@@ -118,18 +156,20 @@ void draw_circle(void* renderer, Circle circle, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    // printf("Drawing circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
     glColor4f(color.r, color.g, color.b, color.a);
-    int num_segments = 100; // Number of segments for the circle
-    float angle_step = 2.0f * 3.1415926f / num_segments;
+    int num_segments = 30; // Reduced segments for performance
+    float angle_step = 2.0f * 3.1415926535f / num_segments;
 
     glBegin(GL_TRIANGLE_FAN);
     glVertex2f(circle.position.x, circle.position.y); // Center of the circle
     for (int i = 0; i <= num_segments; i++) {
         float angle = i * angle_step;
-        float x = circle.position.x + cos(angle) * circle.radius;
-        float y = circle.position.y + sin(angle) * circle.radius;
+        float x = circle.position.x + cosf(angle) * circle.radius;
+        float y = circle.position.y + sinf(angle) * circle.radius;
         glVertex2f(x, y);
     }
     glEnd();
@@ -141,8 +181,10 @@ void draw_line(void* renderer, Line line, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
+    // printf("Drawing line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
 
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
     glColor4f(color.r, color.g, color.b, color.a);
     glBegin(GL_LINES);
     glVertex2f(line.start.x, line.start.y);
@@ -150,149 +192,190 @@ void draw_line(void* renderer, Line line, ColorRGBA color) {
     glEnd();
 }
 
-// Initialize font
-FontData* init_font(const char* font_path, float pixel_height) {
-    FontData* font_data = (FontData*)malloc(sizeof(FontData));
-    if (!font_data) return NULL;
-    
-    // Load font file
+
+// --- Font Loading Implementation ---
+FontData* load_font(const char* font_path, float font_height_pixels) {
+    // Read the font file
     FILE* font_file = fopen(font_path, "rb");
     if (!font_file) {
-        free(font_data);
+        fprintf(stderr, "ERROR: Failed to open font file: %s\n", font_path);
         return NULL;
     }
-    
-    // Get file size
+
     fseek(font_file, 0, SEEK_END);
     long file_size = ftell(font_file);
     fseek(font_file, 0, SEEK_SET);
-    
-    // Read font into buffer
-    font_data->font_buffer = (unsigned char*)malloc(file_size);
-    if (!font_data->font_buffer) {
+
+    unsigned char* ttf_buffer = (unsigned char*)malloc(file_size);
+    if (!ttf_buffer) {
+        fprintf(stderr, "ERROR: Failed to allocate memory for font buffer\n");
         fclose(font_file);
-        free(font_data);
         return NULL;
     }
-    
-    fread(font_data->font_buffer, 1, file_size, font_file);
+
+    size_t read_size = fread(ttf_buffer, 1, file_size, font_file);
     fclose(font_file);
-    
-    // Initialize font
-    if (!stbtt_InitFont(&font_data->font_info, font_data->font_buffer, 0)) {
-        free(font_data->font_buffer);
+    if (read_size != file_size) {
+        fprintf(stderr, "ERROR: Failed to read entire font file: %s\n", font_path);
+        free(ttf_buffer);
+        return NULL;
+    }
+
+    // Allocate memory for the font data structure
+    FontData* font_data = (FontData*)malloc(sizeof(FontData));
+    if (!font_data) {
+        fprintf(stderr, "ERROR: Failed to allocate memory for FontData\n");
+        free(ttf_buffer);
+        return NULL;
+    }
+    font_data->ttf_buffer = ttf_buffer; // Store buffer pointer
+    font_data->font_height_pixels = font_height_pixels;
+
+    // Prepare temporary bitmap for stb_truetype to render into
+    unsigned char* temp_bitmap = (unsigned char*)malloc(FONT_ATLAS_WIDTH * FONT_ATLAS_HEIGHT);
+    if (!temp_bitmap) {
+        fprintf(stderr, "ERROR: Failed to allocate memory for font atlas bitmap\n");
+        free(font_data->ttf_buffer);
         free(font_data);
         return NULL;
     }
-    
-    // Calculate font scaling
-    font_data->scale = stbtt_ScaleForPixelHeight(&font_data->font_info, pixel_height);
-    
-    // Get font metrics
-    stbtt_GetFontVMetrics(&font_data->font_info, &font_data->ascent, 
-                          &font_data->descent, &font_data->line_gap);
-    
-    // Create bitmap for text rendering
-    font_data->bitmap_width = 512;  // Can be adjusted based on needs
-    font_data->bitmap_height = 512;
-    font_data->bitmap = (unsigned char*)malloc(font_data->bitmap_width * font_data->bitmap_height);
-    
-    // Create texture for rendering
+
+    // Use stb_truetype to pack characters into the bitmap
+    stbtt_pack_context pack_context;
+    if (!stbtt_PackBegin(&pack_context, temp_bitmap, FONT_ATLAS_WIDTH, FONT_ATLAS_HEIGHT, 0, 1, NULL)) {
+        fprintf(stderr, "ERROR: Failed to initialize stbtt_pack_context\n");
+        free(temp_bitmap);
+        free(font_data->ttf_buffer);
+        free(font_data);
+        return NULL;
+    }
+
+    stbtt_PackSetOversampling(&pack_context, 1, 1); // No oversampling for simplicity here
+
+    // Pack the desired character range (ASCII 32-126)
+    if (!stbtt_PackFontRange(&pack_context, ttf_buffer, 0, font_height_pixels, FONT_FIRST_CHAR, FONT_NUM_CHARS, font_data->char_data)) {
+        fprintf(stderr, "ERROR: Failed to pack font range into atlas\n");
+        stbtt_PackEnd(&pack_context);
+        free(temp_bitmap);
+        free(font_data->ttf_buffer);
+        free(font_data);
+        return NULL;
+    }
+
+    stbtt_PackEnd(&pack_context); // Finish packing
+
+    // --- Create OpenGL Texture from the bitmap ---
     glGenTextures(1, &font_data->texture_id);
-    
+    glBindTexture(GL_TEXTURE_2D, font_data->texture_id);
+
+    // Set texture parameters - Use GL_ALPHA since stbtt outputs grayscale alpha
+    // Use GL_LINEAR for smoother scaling
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload the pixel data - GL_ALPHA tells OpenGL it's single-channel (alpha) data
+    // Modern OpenGL might prefer GL_RED, but GL_ALPHA works well with fixed-function blending
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // Important for single-channel textures
+    glTexImage2D(
+        GL_TEXTURE_2D,
+        0,                 // Mipmap level
+        GL_ALPHA,          // Internal format (store as alpha)
+        FONT_ATLAS_WIDTH,
+        FONT_ATLAS_HEIGHT,
+        0,                 // Border
+        GL_ALPHA,          // Format of pixel data from stbtt
+        GL_UNSIGNED_BYTE,  // Data type of pixel data
+        temp_bitmap        // The pixel data buffer
+    );
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 4); // Reset to default
+
+    // Unbind texture
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Free the temporary bitmap buffer, we only need the OpenGL texture now
+    free(temp_bitmap);
+
+    printf("Font loaded successfully: %s (Texture ID: %u)\n", font_path, font_data->texture_id);
+
     return font_data;
 }
 
-// Draw text using stb_truetype
-void draw_text(void* renderer, const char* text, Vec2 position, ColorRGBA color, FontData* font) {
-    if (!renderer || !font) return;
+// --- Font Destruction Implementation ---
+void destroy_font(FontData* font_data) {
+    if (!font_data) return;
 
-    Renderer* ctx = (Renderer*)renderer;
-    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    printf("Drawing text: '%s' at (%f, %f)\n", text, position.x, position.y);  // Debug log
-
-    // Set text color
-    glColor4f(color.r, color.g, color.b, color.a);
-    
-    // Clear the bitmap
-    memset(font->bitmap, 0, font->bitmap_width * font->bitmap_height);
-    
-    // Current position for rendering
-    float x = 0;
-    float y = 0;
-    
-    // Render each character
-    for (const char* c = text; *c; c++) {
-        // Get character bounding box
-        int x0, y0, x1, y1;
-        stbtt_GetCodepointBitmapBox(&font->font_info, *c, font->scale, font->scale, 
-                                    &x0, &y0, &x1, &y1);
-        
-        // Get character advance and kerning
-        int advance, lsb;
-        stbtt_GetCodepointHMetrics(&font->font_info, *c, &advance, &lsb);
-        
-        // Calculate position in the bitmap
-        int bitmap_x = (int)x + x0;
-        int bitmap_y = (int)y + y0 + (font->ascent * font->scale);
-        
-        // Render the character to the bitmap
-        stbtt_MakeCodepointBitmap(&font->font_info, 
-                                 font->bitmap + bitmap_x + bitmap_y * font->bitmap_width,
-                                 x1 - x0, y1 - y0, font->bitmap_width, 
-                                 font->scale, font->scale, *c);
-        
-        // Advance position
-        x += advance * font->scale;
-        
-        // Add kerning with the next character
-        if (*(c+1)) {
-            x += stbtt_GetCodepointKernAdvance(&font->font_info, *c, *(c+1)) * font->scale;
-        }
-    }
-    
-    // Bind the texture
-    glBindTexture(GL_TEXTURE_2D, font->texture_id);
-    
-    // Update texture with the rendered text bitmap
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, font->bitmap_width, font->bitmap_height, 
-                0, GL_ALPHA, GL_UNSIGNED_BYTE, font->bitmap);
-    
-    // Set texture parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    
-    // Enable texturing and blending for text
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    
-    // Draw the textured quad
-    float text_width = x;
-    float text_height = (font->ascent - font->descent) * font->scale;
-    
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0); glVertex2f(position.x, position.y);
-    glTexCoord2f(1, 0); glVertex2f(position.x + text_width, position.y);
-    glTexCoord2f(1, 1); glVertex2f(position.x + text_width, position.y + text_height);
-    glTexCoord2f(0, 1); glVertex2f(position.x, position.y + text_height);
-    glEnd();
-    
-    // Disable texturing and blending
-    glDisable(GL_BLEND);
-    glDisable(GL_TEXTURE_2D);
+    printf("Destroying font (Texture ID: %u)\n", font_data->texture_id);
+    glDeleteTextures(1, &font_data->texture_id); // Delete the OpenGL texture
+    free(font_data->ttf_buffer);                 // Free the font file buffer
+    free(font_data);                              // Free the FontData struct itself
 }
 
-// Free font resources
-void destroy_font(FontData* font) {
-    if (!font) return;
-    
-    // Free resources
-    if (font->bitmap) free(font->bitmap);
-    if (font->font_buffer) free(font->font_buffer);
-    
-    // Delete OpenGL texture
-    glDeleteTextures(1, &font->texture_id);
-    
-    free(font);
+
+// --- Text Drawing Implementation ---
+void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, ColorRGBA color) {
+    if (!renderer || !font_data || !text) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;
+
+    // Enable texturing and bind the font atlas texture
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, font_data->texture_id);
+
+    // Set the text color - The texture's alpha will modulate this color's alpha
+    glColor4f(color.r, color.g, color.b, color.a);
+
+    // stbtt_aligned_quad requires current x and y to be passed by pointer
+    // It calculates the quad vertices and updates x/y for the next character
+    float current_x = pos.x;
+    float current_y = pos.y;
+
+    glBegin(GL_QUADS); // Begin drawing quads for each character
+
+    // Loop through each character in the string
+    for (const char* p = text; *p; ++p) {
+        // Check if character is in the range we packed (32-126)
+        if (*p >= FONT_FIRST_CHAR && *p < FONT_FIRST_CHAR + FONT_NUM_CHARS) {
+            stbtt_aligned_quad quad;
+
+            // Get the quad geometry and texture coordinates for the character
+            // Note: The y coordinate is adjusted based on the font baseline.
+            // stbtt_GetPackedQuad calculates screen coords. The y-axis points down.
+            stbtt_GetPackedQuad(
+                font_data->char_data, // Character data array
+                FONT_ATLAS_WIDTH,     // Atlas width
+                FONT_ATLAS_HEIGHT,    // Atlas height
+                *p - FONT_FIRST_CHAR, // Character index (offset from first char)
+                &current_x,           // Pointer to current x position (updated by function)
+                &current_y,           // Pointer to current y position (updated by function)
+                &quad,                // Output quad structure
+                1                     // Align to pixel grid (1 = true)
+            );
+
+            // Render the quad
+            glTexCoord2f(quad.s0, quad.t0); glVertex2f(quad.x0, quad.y0); // Top-left
+            glTexCoord2f(quad.s0, quad.t1); glVertex2f(quad.x0, quad.y1); // Bottom-left
+            glTexCoord2f(quad.s1, quad.t1); glVertex2f(quad.x1, quad.y1); // Bottom-right
+            glTexCoord2f(quad.s1, quad.t0); glVertex2f(quad.x1, quad.y0); // Top-right
+
+        } else {
+             // Handle characters outside the range (e.g., skip, draw '?')
+             // For simplicity, just advance position roughly for unknown chars like space
+             if (*p == ' ') {
+                 current_x += font_data->font_height_pixels * 0.3f; // Approximate space width
+             } else {
+                 // Maybe draw a '?' or skip
+                 // For now, just advance a bit
+                 current_x += font_data->font_height_pixels * 0.5f;
+             }
+        }
+    }
+
+    glEnd(); // End drawing quads
+
+    // Unbind texture and disable texturing
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
 }
