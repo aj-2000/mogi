@@ -62,9 +62,19 @@ void handle_events(void* renderer);
 // Drawing operations
 void clear_screen(void* renderer, ColorRGBA color);
 void present_screen(void* renderer);
-void draw_rectangle(void* renderer, Rect rect, ColorRGBA color);
-void draw_circle(void* renderer, Circle circle, ColorRGBA color);
+
+void draw_rectangle_outline(void* renderer, Rect rect, ColorRGBA color);
+void draw_rectangle_filled(void* renderer, Rect rect, ColorRGBA color);
+void draw_rectangle_filled_outline(void* renderer, Rect rect, ColorRGBA fill_color, ColorRGBA outline_color);
+
+void draw_circle_outline(void* renderer, Circle circle, ColorRGBA color);
+void draw_circle_filled(void* renderer, Circle circle, ColorRGBA color);
+void draw_circle_filled_outline(void* renderer, Circle circle, ColorRGBA fill_color, ColorRGBA outline_color);
+
 void draw_line(void* renderer, Line line, ColorRGBA color);
+void draw_line_thick(void* renderer, Line line, ColorRGBA color, float thickness);
+void draw_line_dashed(void* renderer, Line line, ColorRGBA color, float dash_length, float gap_length);
+void draw_line_dotted(void* renderer, Line line, ColorRGBA color, float dot_radius);
 
 // --- New Font Functions ---
 FontData* load_font(const char* font_path, float font_height_pixels);

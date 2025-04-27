@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
         if (!nob_set_current_dir(root_dir)) return 1;
         
     }
-
+    // TODO: move inside build-renderer
     if (!nob_copy_file(BUILD_DIR RENDERER_LIB_A, LIB_DIR RENDERER_LIB_A)) return 1;
 
     if (!nob_set_current_dir(root_dir)) return 1;

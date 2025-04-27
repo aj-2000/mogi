@@ -87,26 +87,6 @@ void clear_screen(void* renderer, ColorRGBA color) {
     glClear(GL_COLOR_BUFFER_BIT);
 }
 
-// Draw a rectangle (RGBA)
-void draw_rectangle(void* renderer, Rect rect, ColorRGBA color) {
-    if (!renderer) return;
-
-    Renderer* ctx = (Renderer*)renderer;
-    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
-
-    // Disable texturing if it was enabled for text
-    glDisable(GL_TEXTURE_2D);
-    glColor4f(color.r, color.g, color.b, color.a);
-
-    glBegin(GL_QUADS);
-    glVertex2f(rect.position.x, rect.position.y); // Top-left
-    glVertex2f(rect.position.x + rect.width, rect.position.y); // Top-right
-    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Bottom-right
-    glVertex2f(rect.position.x, rect.position.y + rect.height); // Bottom-left
-    glEnd();
-}
-
 // Present the screen (swap buffers)
 void present_screen(void* renderer) {
     if (!renderer) return;
@@ -191,6 +171,228 @@ void draw_line(void* renderer, Line line, ColorRGBA color) {
     glVertex2f(line.end.x, line.end.y);
     glEnd();
 }
+
+// Draw a filled circle (RGBA)
+void draw_circle_filled(void* renderer, Circle circle, ColorRGBA color) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing filled circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(color.r, color.g, color.b, color.a);
+    int num_segments = 30; // Reduced segments for performance
+    float angle_step = 2.0f * 3.1415926535f / num_segments;
+
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(circle.position.x, circle.position.y); // Center of the circle
+    for (int i = 0; i <= num_segments; i++) {
+        float angle = i * angle_step;
+        float x = circle.position.x + cosf(angle) * circle.radius;
+        float y = circle.position.y + sinf(angle) * circle.radius;
+        glVertex2f(x, y);
+    }
+    glEnd();
+}
+
+// Draw a thick line (RGBA)
+void draw_line_thick(void* renderer, Line line, ColorRGBA color, float thickness) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing thick line from (%f, %f) to (%f, %f) with thickness %f\n", line.start.x, line.start.y, line.end.x, line.end.y, thickness);  // Debug log
+
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(color.r, color.g, color.b, color.a);
+
+    // Calculate the direction vector of the line
+    Vec2 dir = {line.end.x - line.start.x, line.end.y - line.start.y};
+    float length = sqrtf(dir.x * dir.x + dir.y * dir.y);
+    if (length == 0.0f) return; // Avoid division by zero
+
+    // Normalize the direction vector
+    dir.x /= length;
+    dir.y /= length;
+
+    // Calculate perpendicular vector for thickness
+    Vec2 perp = {-dir.y * thickness / 2.0f, dir.x * thickness / 2.0f};
+
+    glBegin(GL_QUADS);
+    glVertex2f(line.start.x + perp.x, line.start.y + perp.y); // Start point offset
+    glVertex2f(line.start.x - perp.x, line.start.y - perp.y); // Start point offset
+    glVertex2f(line.end.x - perp.x, line.end.y - perp.y);     // End point offset
+    glVertex2f(line.end.x + perp.x, line.end.y + perp.y);     // End point offset
+    glEnd();
+}
+
+// Draw a dashed line (RGBA)
+void draw_line_dashed(void* renderer, Line line, ColorRGBA color, float dash_length, float gap_length) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing dashed line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
+
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(color.r, color.g, color.b, color.a);
+
+    // Calculate the direction vector of the line
+    Vec2 dir = {line.end.x - line.start.x, line.end.y - line.start.y};
+    float length = sqrtf(dir.x * dir.x + dir.y * dir.y);
+    if (length == 0.0f) return; // Avoid division by zero
+
+    // Normalize the direction vector
+    dir.x /= length;
+    dir.y /= length;
+
+    // Calculate the number of dashes and gaps needed
+    float total_length = length;
+    int num_segments = (int)(total_length / (dash_length + gap_length));
+    
+    for (int i = 0; i < num_segments; i++) {
+        Vec2 start_offset = {line.start.x + dir.x * i * (dash_length + gap_length), line.start.y + dir.y * i * (dash_length + gap_length)};
+        Vec2 end_offset = {start_offset.x + dir.x * dash_length, start_offset.y + dir.y * dash_length};
+
+        glBegin(GL_LINES);
+        glVertex2f(start_offset.x, start_offset.y);
+        glVertex2f(end_offset.x, end_offset.y);
+        glEnd();
+    }
+}
+
+// Draw a circle with outline (RGBA)
+void draw_circle_outline(void* renderer, Circle circle, ColorRGBA color) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing circle outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(color.r, color.g, color.b, color.a);
+    int num_segments = 30; // Reduced segments for performance
+    float angle_step = 2.0f * 3.1415926535f / num_segments;
+
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i < num_segments; i++) {
+        float angle = i * angle_step;
+        float x = circle.position.x + cosf(angle) * circle.radius;
+        float y = circle.position.y + sinf(angle) * circle.radius;
+        glVertex2f(x, y);
+    }
+    glEnd();
+}
+
+
+// Draw a filled circle with outline (RGBA)
+void draw_circle_filled_outline(void* renderer, Circle circle, ColorRGBA fill_color, ColorRGBA outline_color) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing filled circle with outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+
+    // Draw filled circle
+    draw_circle_filled(renderer, circle, fill_color);
+
+    // Draw outline
+    draw_circle_outline(renderer, circle, outline_color);
+}
+
+
+// Draw a dotted line (RGBA)
+void draw_line_dotted(void* renderer, Line line, ColorRGBA color, float dot_radius) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing dotted line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
+
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(color.r, color.g, color.b, color.a);
+
+    // Calculate the direction vector of the line
+    Vec2 dir = {line.end.x - line.start.x, line.end.y - line.start.y};
+    float length = sqrtf(dir.x * dir.x + dir.y * dir.y);
+    if (length == 0.0f) return; // Avoid division by zero
+
+    // Normalize the direction vector
+    dir.x /= length;
+    dir.y /= length;
+
+    // Calculate the number of dots needed
+    int num_dots = (int)(length / (dot_radius * 2.0f)); // Adjust for dot size
+
+    for (int i = 0; i < num_dots; i++) {
+        Vec2 offset = {line.start.x + dir.x * i * (dot_radius * 2.0f), line.start.y + dir.y * i * (dot_radius * 2.0f)};
+        Circle dot = {offset, dot_radius};
+        draw_circle_filled(renderer, dot, color); // Draw each dot as a filled circle
+    }
+}
+
+
+// Draw a filled rectangle (RGBA)
+void draw_rectangle_filled(void* renderer, Rect rect, ColorRGBA color) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing filled rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(color.r, color.g, color.b, color.a);
+
+    glBegin(GL_QUADS);
+    glVertex2f(rect.position.x, rect.position.y); // Top-left
+    glVertex2f(rect.position.x + rect.width, rect.position.y); // Top-right
+    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Bottom-right
+    glVertex2f(rect.position.x, rect.position.y + rect.height); // Bottom-left
+    glEnd();
+}
+
+// Draw a  rectangle with outline (RGBA)
+void draw_rectangle_outline(void* renderer, Rect rect, ColorRGBA color) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing rectangle outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+
+    // Disable texturing if it was enabled for text
+    glDisable(GL_TEXTURE_2D);
+    glColor4f(color.r, color.g, color.b, color.a);
+
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(rect.position.x, rect.position.y); // Top-left
+    glVertex2f(rect.position.x + rect.width, rect.position.y); // Top-right
+    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Bottom-right
+    glVertex2f(rect.position.x, rect.position.y + rect.height); // Bottom-left
+    glEnd();
+}
+
+// Draw a filled rectangle with outline (RGBA)
+void draw_rectangle_filled_outline(void* renderer, Rect rect, ColorRGBA fill_color, ColorRGBA outline_color) {
+    if (!renderer) return;
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
+    // printf("Drawing filled rectangle with outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+
+    // Draw filled rectangle
+    draw_rectangle_filled(renderer, rect, fill_color);
+
+    // Draw outline
+    draw_rectangle_outline(renderer, rect, outline_color);
+}
+
 
 
 // --- Font Loading Implementation ---
