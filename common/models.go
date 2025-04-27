@@ -75,7 +75,7 @@ func (c *Container) Children() []IComponent {
 
 type Text struct {
 	Component
-	Text     func() string
+	Text     string
 	Color    ColorRGBA
 	FontSize float32
 }

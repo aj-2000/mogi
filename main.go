@@ -21,8 +21,10 @@ func init() {
 }
 
 type App struct {
-	fonts    map[string]*C.FontData
-	renderer unsafe.Pointer
+	fonts       map[string]*C.FontData
+	renderer    unsafe.Pointer
+	totalTime   float64
+	totalFrames int64
 }
 
 func (app *App) LoadFont(path string, size float32) (*C.FontData, error) {
@@ -48,17 +50,18 @@ func (app *App) UnloadFont(path string, size float32) {
 	}
 }
 
-func (app *App) Run(root common.IComponent) {
-	if root == nil {
-		log.Fatalln("Root component is nil")
-	}
-
+func (app *App) Run(f func(app *App) common.IComponent) {
 	if app.renderer == nil {
 		log.Fatalln("Renderer is not initialized")
 	}
 
-	componentRenderer := &ComponentRenderer{Component: root}
 	for C.window_should_close(app.renderer) == 0 {
+		deltaTime := app.GetDeltaTime()
+		app.totalTime += float64(deltaTime)
+		app.totalFrames++
+		root := f(app)
+		componentRenderer := &ComponentRenderer{Component: root}
+
 		C.clear_screen(app.renderer, C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0})
 		componentRenderer.Render(app)
 		C.present_screen(app.renderer)
@@ -71,9 +74,21 @@ func (app *App) GetDeltaTime() float32 {
 	return float32(deltaTime)
 }
 
+// TODO: it's not correct for some reason
 func (app *App) GetFPS() float32 {
-	fps := 1.0 / app.GetDeltaTime()
-	return float32(fps)
+	deltaTime := app.GetDeltaTime()
+	if deltaTime == 0 {
+		return 0
+	}
+	return 1.0 / deltaTime
+}
+
+func (app *App) GetAvgFPS() float32 {
+	if app.totalFrames == 0 {
+		return 0
+	}
+	avgFPS := float64(app.totalFrames) / app.totalTime
+	return float32(avgFPS)
 }
 
 func (app *App) SetVSync(vsync bool) {
@@ -100,6 +115,7 @@ func NewApp(title string, width int, height int) *App {
 	if renderer == nil {
 		log.Fatalln("Failed to create renderer")
 	}
+
 	app := &App{
 		fonts:    make(map[string]*C.FontData),
 		renderer: renderer,
@@ -167,7 +183,7 @@ func (cr *ComponentRenderer) Render(app *App) {
 		if !ok {
 			return
 		}
-		cstr := C.CString(text.Text())
+		cstr := C.CString(text.Text)
 		defer C.free(unsafe.Pointer(cstr))
 		fontColor := goColortoCColorRGBA(text.Color)
 		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", text.FontSize)
@@ -232,46 +248,49 @@ func main() {
 
 	app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 
-	var children []common.IComponent
-	fpsCounterComponent := &common.Container{
-		Component: common.Component{
-			ComponentType: common.TContainer,
-			Pos:           common.Position{X: 10, Y: 10},
-			Size:          common.Vec2{X: 130, Y: 28},
-			ID:            "fps_counter_background",
-			Children: []common.IComponent{
-				&common.Text{
-					Component: common.Component{
-						ComponentType: common.TText,
-						Pos:           common.Position{X: 10, Y: 0, Type: common.PositionTypeRelative},
-						Size:          common.Vec2{X: 100, Y: 30},
-						ID:            "fps_counter_text",
+	// TODO: should we need to expose app?
+	app.Run(func(app *App) common.IComponent {
+		app.SetVSync(false)
+		var children []common.IComponent
+		fpsCounterComponent := &common.Container{
+			Component: common.Component{
+				ComponentType: common.TContainer,
+				Pos:           common.Position{X: 10, Y: 10},
+				Size:          common.Vec2{X: 200, Y: 28},
+				ID:            "fps_counter_background",
+				Children: []common.IComponent{
+					&common.Text{
+						Component: common.Component{
+							ComponentType: common.TText,
+							Pos:           common.Position{X: 10, Y: 0, Type: common.PositionTypeRelative},
+							Size:          common.Vec2{X: 180, Y: 30},
+							ID:            "fps_counter_text",
+						},
+						Text:     fmt.Sprintf("Avg. FPS: %.0f", app.GetAvgFPS()),
+						Color:    consts.ColorRed,
+						FontSize: 24,
 					},
-					Text:     func() string { return fmt.Sprintf("FPS: %.2f", app.GetFPS()) },
-					Color:    consts.ColorRed,
-					FontSize: 24,
 				},
 			},
-		},
-		BackgroundColor: consts.ColorGreen,
-	}
+			BackgroundColor: consts.ColorGreen,
+		}
 
-	children = append(children, examples.ChessboardComponent(), examples.BuyNowCardComponent(), fpsCounterComponent)
-	mainContainer := &common.Container{
-		Component: common.Component{
-			ComponentType: common.TContainer,
-			Pos:           common.Position{X: 320, Y: 330},
-			Size:          common.Vec2{X: 200, Y: 310},
-			ID:            "buy_now_card",
-			Children:      children,
-		},
-		BackgroundColor: consts.ColorBlack,
-		BorderColor:     consts.ColorWhite,
-		BorderWidth:     2,
-		BorderRadius:    10,
-	}
-
-	app.Run(mainContainer)
+		children = append(children, examples.ChessboardComponent(), examples.BuyNowCardComponent(), fpsCounterComponent)
+		mainContainer := &common.Container{
+			Component: common.Component{
+				ComponentType: common.TContainer,
+				Pos:           common.Position{X: 320, Y: 330},
+				Size:          common.Vec2{X: 200, Y: 310},
+				ID:            "buy_now_card",
+				Children:      children,
+			},
+			BackgroundColor: consts.ColorBlack,
+			BorderColor:     consts.ColorWhite,
+			BorderWidth:     2,
+			BorderRadius:    10,
+		}
+		return mainContainer
+	})
 
 	fmt.Println("Exiting")
 }
