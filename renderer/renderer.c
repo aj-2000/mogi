@@ -136,7 +136,7 @@ void draw_circle(void* renderer, Circle circle, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    printf("Drawing circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -155,30 +155,13 @@ void draw_circle(void* renderer, Circle circle, ColorRGBA color) {
     glEnd();
 }
 
-// Draw a line (RGBA)
-void draw_line(void* renderer, Line line, ColorRGBA color) {
-    if (!renderer) return;
-
-    Renderer* ctx = (Renderer*)renderer;
-    if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
-
-    // Disable texturing if it was enabled for text
-    glDisable(GL_TEXTURE_2D);
-    glColor4f(color.r, color.g, color.b, color.a);
-    glBegin(GL_LINES);
-    glVertex2f(line.start.x, line.start.y);
-    glVertex2f(line.end.x, line.end.y);
-    glEnd();
-}
-
 // Draw a filled circle (RGBA)
 void draw_circle_filled(void* renderer, Circle circle, ColorRGBA color) {
     if (!renderer) return;
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing filled circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    printf("Drawing filled circle at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -271,7 +254,7 @@ void draw_circle_outline(void* renderer, Circle circle, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing circle outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    printf("Drawing circle outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -296,7 +279,7 @@ void draw_circle_filled_outline(void* renderer, Circle circle, ColorRGBA fill_co
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing filled circle with outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
+    printf("Drawing filled circle with outline at (%f, %f), radius: %f\n", circle.position.x, circle.position.y, circle.radius);  // Debug log
 
     // Draw filled circle
     draw_circle_filled(renderer, circle, fill_color);
@@ -312,7 +295,7 @@ void draw_line_dotted(void* renderer, Line line, ColorRGBA color, float dot_radi
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing dotted line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
+    printf("Drawing dotted line from (%f, %f) to (%f, %f)\n", line.start.x, line.start.y, line.end.x, line.end.y);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -344,7 +327,7 @@ void draw_rectangle_filled(void* renderer, Rect rect, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing filled rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+    printf("Drawing filled rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -364,7 +347,7 @@ void draw_rectangle_outline(void* renderer, Rect rect, ColorRGBA color) {
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing rectangle outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+    printf("Drawing rectangle outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
     // Disable texturing if it was enabled for text
     glDisable(GL_TEXTURE_2D);
@@ -384,7 +367,7 @@ void draw_rectangle_filled_outline(void* renderer, Rect rect, ColorRGBA fill_col
 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;  // Ensure the renderer is valid
-    // printf("Drawing filled rectangle with outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
+    printf("Drawing filled rectangle with outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);  // Debug log
 
     // Draw filled rectangle
     draw_rectangle_filled(renderer, rect, fill_color);
@@ -499,7 +482,7 @@ FontData* load_font(const char* font_path, float font_height_pixels) {
     // Free the temporary bitmap buffer, we only need the OpenGL texture now
     free(temp_bitmap);
 
-    printf("Font loaded successfully: %s (Texture ID: %u)\n", font_path, font_data->texture_id);
+    // printf("Font loaded successfully: %s (Texture ID: %u)\n", font_path, font_data->texture_id);
 
     return font_data;
 }
@@ -522,6 +505,8 @@ void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, 
     Renderer* ctx = (Renderer*)renderer;
     if (!ctx || !ctx->window) return;
 
+    printf("Drawing text: '%s' at (%f, %f)\n", text, pos.x, pos.y);  // Debug log
+    
     // Enable texturing and bind the font atlas texture
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, font_data->texture_id);
@@ -533,6 +518,15 @@ void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, 
     // It calculates the quad vertices and updates x/y for the next character
     float current_x = pos.x;
     float current_y = pos.y;
+
+    // Adjust y to baseline using font ascent
+    float ascent = 0.0f;
+    stbtt_fontinfo info;
+    stbtt_InitFont(&info, font_data->ttf_buffer, stbtt_GetFontOffsetForIndex(font_data->ttf_buffer, 0));
+    int ascent_px, descent_px, lineGap_px;
+    stbtt_GetFontVMetrics(&info, &ascent_px, &descent_px, &lineGap_px);
+    ascent = ascent_px * font_data->font_height_pixels / (float)(ascent_px - descent_px);
+    current_y += ascent;
 
     glBegin(GL_QUADS); // Begin drawing quads for each character
 

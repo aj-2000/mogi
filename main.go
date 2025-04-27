@@ -61,9 +61,21 @@ var ColorBurlywood = C.ColorRGBA{r: 0.87, g: 0.72, b: 0.53, a: 1.0}
 
 // UI container
 
+type PositionType int
+
+const (
+	PositionTypeAbsolute PositionType = iota
+	PositionTypeRelative
+)
+
+type Position struct {
+	X, Y float32
+	Type PositionType
+}
+
 type IComponent interface {
 	Type() ComponentType
-	Pos() Vec2
+	Pos() Position
 	Size() Vec2
 	ID() string
 	Parent() IComponent
@@ -72,7 +84,7 @@ type IComponent interface {
 
 type Component struct {
 	ComponentType ComponentType
-	Pos           Vec2
+	Pos           Position
 	Size          Vec2
 	ID            string
 	Parent        IComponent
@@ -98,7 +110,7 @@ func (c *Container) Type() ComponentType {
 	return c.Component.ComponentType
 }
 
-func (c *Container) Pos() Vec2 {
+func (c *Container) Pos() Position {
 	return c.Component.Pos
 }
 
@@ -127,7 +139,7 @@ func (t *Text) Type() ComponentType {
 	return t.Component.ComponentType
 }
 
-func (t *Text) Pos() Vec2 {
+func (t *Text) Pos() Position {
 	return t.Component.Pos
 }
 
@@ -160,7 +172,7 @@ func (b *Button) Type() ComponentType {
 	return b.Component.ComponentType
 }
 
-func (b *Button) Pos() Vec2 {
+func (b *Button) Pos() Position {
 	return b.Component.Pos
 }
 
@@ -184,14 +196,28 @@ type ComponentRenderer struct {
 	Component IComponent
 }
 
-// Helper to convert Go Vec2 to C.Vec2
-func goVec2ToCVec2(v Vec2) C.Vec2 {
-	return C.Vec2{x: C.float(v.X), y: C.float(v.Y)}
-}
-
 func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
+	font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
+
 	if cr.Component == nil {
 		return
+	}
+	pos := cr.Component.Pos()
+	posVec2 := C.Vec2{x: 0, y: 0}
+
+	switch pos.Type {
+	case PositionTypeAbsolute:
+		posVec2.x = C.float(pos.X)
+		posVec2.y = C.float(pos.Y)
+	default:
+		if cr.Component.Parent() != nil {
+			parentPos := cr.Component.Parent().Pos()
+			posVec2.x = C.float(parentPos.X + pos.X)
+			posVec2.y = C.float(parentPos.Y + pos.Y)
+		} else {
+			posVec2.x = C.float(pos.X)
+			posVec2.y = C.float(pos.Y)
+		}
 	}
 
 	switch cr.Component.Type() {
@@ -203,7 +229,7 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		C.draw_rectangle_filled(
 			renderer,
 			C.Rect{
-				position: goVec2ToCVec2(container.Pos()),
+				position: posVec2,
 				width:    C.float(container.Size().X),
 				height:   C.float(container.Size().Y),
 			},
@@ -217,13 +243,13 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		}
 		cstr := C.CString(text.Text)
 		defer C.free(unsafe.Pointer(cstr))
-		font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
+
 		defer C.destroy_font(font)
 		C.draw_text(
 			renderer,
 			font,
 			cstr,
-			goVec2ToCVec2(text.Pos()),
+			posVec2,
 			ColorWhite,
 		)
 
@@ -235,7 +261,7 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		C.draw_rectangle_filled(
 			renderer,
 			C.Rect{
-				position: goVec2ToCVec2(button.Pos()),
+				position: posVec2,
 				width:    C.float(button.Size().X),
 				height:   C.float(button.Size().Y),
 			},
@@ -243,14 +269,14 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		)
 		cstr := C.CString(button.Text)
 		defer C.free(unsafe.Pointer(cstr))
-		font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
+
 		defer C.destroy_font(font)
-		pos := Vec2{button.Pos().X + 10, button.Pos().Y + 10}
+		pos := C.Vec2{x: posVec2.x, y: posVec2.y}
 		C.draw_text(
 			renderer,
 			font,
 			cstr,
-			goVec2ToCVec2(pos),
+			pos,
 			ColorWhite,
 		)
 	}
@@ -266,6 +292,7 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 func main() {
 	renderer := C.create_renderer(C.int(800), C.int(600), C.CString("Go with C Renderer"))
 	defer C.destroy_renderer(renderer)
+	font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
 
 	if renderer == nil {
 		fmt.Println("Failed to create renderer")
@@ -274,76 +301,75 @@ func main() {
 
 	// Create color structure
 	bgColor := C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0}
-	rectColor := C.ColorRGBA{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
+	// rectColor := C.ColorRGBA{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
 
-	// Create rectangle structure
-	rect := C.Rect{
-		position: C.Vec2{x: 100.0, y: 100.0},
-		width:    200.0,
-		height:   100.0,
-	}
+	// // Create rectangle structure
+	// rect := C.Rect{
+	// 	position: C.Vec2{x: 100.0, y: 100.0},
+	// 	width:    200.0,
+	// 	height:   100.0,
+	// }
 
-	font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
 	defer C.destroy_font(font)
 
 	for C.window_should_close(renderer) == 0 {
 		C.clear_screen(renderer, bgColor)
-		C.draw_rectangle_filled(renderer, rect, rectColor)
-		C.draw_rectangle_outline(renderer, rect, ColorWhite)
-		C.draw_rectangle_filled_outline(renderer, rect, ColorGray, ColorDarkGray)
+		// C.draw_rectangle_filled(renderer, rect, rectColor)
+		// C.draw_rectangle_outline(renderer, rect, ColorWhite)
+		// C.draw_rectangle_filled_outline(renderer, rect, ColorGray, ColorDarkGray)
 
-		// Example of formatted string
-		smallFont := font                                              // Replace with actual small font if available
-		buffer := fmt.Sprintf("Small Font Example (Size: %.0f)", 24.0) // Replace 60.0 with actual font height if available
+		// // Example of formatted string
+		// smallFont := font                                              // Replace with actual small font if available
+		// buffer := fmt.Sprintf("Small Font Example (Size: %.0f)", 24.0) // Replace 60.0 with actual font height if available
 
-		pos3 := C.Vec2{x: 50.0, y: 250.0}
-		C.draw_text(renderer, smallFont, C.CString(buffer), pos3, ColorGold)
+		// pos3 := C.Vec2{x: 50.0, y: 250.0}
+		// C.draw_text(renderer, smallFont, C.CString(buffer), pos3, ColorGold)
 
-		pos4 := C.Vec2{x: 50.0, y: 280.0}
-		C.draw_text(renderer, smallFont, C.CString("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), pos4, ColorCyan)
+		// pos4 := C.Vec2{x: 50.0, y: 280.0}
+		// C.draw_text(renderer, smallFont, C.CString("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), pos4, ColorCyan)
 
-		pos5 := C.Vec2{x: 50.0, y: 300.0}
-		C.draw_text(renderer, smallFont, C.CString("abcdefghijklmnopqrstuvwxyz"), pos5, ColorNavy)
+		// pos5 := C.Vec2{x: 50.0, y: 300.0}
+		// C.draw_text(renderer, smallFont, C.CString("abcdefghijklmnopqrstuvwxyz"), pos5, ColorNavy)
 
-		pos6 := C.Vec2{x: 50.0, y: 320.0}
-		C.draw_text(renderer, smallFont, C.CString("0123456789 .,:;!?()[]{}"), pos6, ColorOrange)
+		// pos6 := C.Vec2{x: 50.0, y: 320.0}
+		// C.draw_text(renderer, smallFont, C.CString("0123456789 .,:;!?()[]{}"), pos6, ColorOrange)
 
-		// Create Circle struct and draw
-		circle := C.Circle{
-			position: C.Vec2{x: 400.0, y: 300.0},
-			radius:   50.0,
-		}
-		C.draw_circle_filled(renderer, circle, ColorViolet)
-		C.draw_circle_outline(renderer, circle, ColorBrown)
-		C.draw_rectangle_filled_outline(renderer, rect, ColorGray, ColorDarkGray)
+		// // Create Circle struct and draw
+		// circle := C.Circle{
+		// 	position: C.Vec2{x: 400.0, y: 300.0},
+		// 	radius:   50.0,
+		// }
+		// C.draw_circle_filled(renderer, circle, ColorViolet)
+		// C.draw_circle_outline(renderer, circle, ColorBrown)
+		// C.draw_rectangle_filled_outline(renderer, rect, ColorGray, ColorDarkGray)
 
-		// Create Line struct and draw
-		line := C.Line{
-			start: C.Vec2{x: 100.0, y: 100.0},
-			end:   C.Vec2{x: 670, y: 200.0},
-		}
-		C.draw_line(renderer, line, ColorRed)
-		line = C.Line{
-			start: C.Vec2{x: 100.0, y: 100.0},
-			end:   C.Vec2{x: 750, y: 200.0},
-		}
-		C.draw_line_thick(renderer, line, ColorGreen, 5.0)
-		line = C.Line{
-			start: C.Vec2{x: 100.0, y: 100.0},
-			end:   C.Vec2{x: 850, y: 200.0},
-		}
-		C.draw_line_dashed(renderer, line, ColorBlue, 5.0, 10.0)
+		// // Create Line struct and draw
+		// line := C.Line{
+		// 	start: C.Vec2{x: 100.0, y: 100.0},
+		// 	end:   C.Vec2{x: 670, y: 200.0},
+		// }
+		// C.draw_line(renderer, line, ColorRed)
+		// line = C.Line{
+		// 	start: C.Vec2{x: 100.0, y: 100.0},
+		// 	end:   C.Vec2{x: 750, y: 200.0},
+		// }
+		// C.draw_line_thick(renderer, line, ColorGreen, 5.0)
+		// line = C.Line{
+		// 	start: C.Vec2{x: 100.0, y: 100.0},
+		// 	end:   C.Vec2{x: 850, y: 200.0},
+		// }
+		// C.draw_line_dashed(renderer, line, ColorBlue, 5.0, 10.0)
 
-		line = C.Line{
-			start: C.Vec2{x: 100.0, y: 100.0},
-			end:   C.Vec2{x: 950, y: 200.0},
-		}
-		C.draw_line_dotted(renderer, line, ColorWhite, 2.0)
+		// line = C.Line{
+		// 	start: C.Vec2{x: 100.0, y: 100.0},
+		// 	end:   C.Vec2{x: 950, y: 200.0},
+		// }
+		// C.draw_line_dotted(renderer, line, ColorWhite, 2.0)
 
 		text := &Text{
 			Component: Component{
 				ComponentType: TText,
-				Pos:           Vec2{X: 10, Y: 10},
+				Pos:           Position{X: 10, Y: 10, Type: PositionTypeRelative},
 				Size:          Vec2{X: 180, Y: 30},
 				ID:            "text1",
 				Parent:        nil,
@@ -355,7 +381,7 @@ func main() {
 		button := &Button{
 			Component: Component{
 				ComponentType: TButton,
-				Pos:           Vec2{X: 10, Y: 50},
+				Pos:           Position{X: 10, Y: 50, Type: PositionTypeRelative},
 				Size:          Vec2{X: 180, Y: 30},
 				ID:            "button1",
 				Parent:        nil,
@@ -370,7 +396,7 @@ func main() {
 		container := &Container{
 			Component: Component{
 				ComponentType: TContainer,
-				Pos:           Vec2{X: 50, Y: 50},
+				Pos:           Position{X: 50, Y: 50},
 				Size:          Vec2{X: 200, Y: 200},
 				ID:            "container1",
 				Parent:        nil,
@@ -380,6 +406,9 @@ func main() {
 				},
 			},
 		}
+
+		text.Component.Parent = container
+		button.Component.Parent = container
 
 		// render
 		componentRenderer := &ComponentRenderer{Component: container}

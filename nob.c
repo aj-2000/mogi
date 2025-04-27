@@ -53,6 +53,12 @@ int main(int argc, char **argv) {
 
     nob_log(NOB_INFO, "Root directory: %s\n", root_dir);
 
+    // delete bin and build directories if they exist
+    #ifdef _WIN32
+    //
+        nob_cmd_append(&cmd, "powershell.exe", "-Command", "Remove-Item", "-Recurse", "-Force", BUILD_DIR);
+        nob_cmd_run_sync_and_reset(&cmd);
+    #endif
     if (!nob_mkdir_if_not_exists(BUILD_DIR) || !nob_mkdir_if_not_exists(BIN_DIR)) return 1;
     
     if (build_renderer) {
