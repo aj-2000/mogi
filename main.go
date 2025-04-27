@@ -157,7 +157,7 @@ func (cr *ComponentRenderer) Render(app *App) {
 		if !ok {
 			return
 		}
-		cstr := C.CString(text.Text)
+		cstr := C.CString(text.Text())
 		defer C.free(unsafe.Pointer(cstr))
 		fontColor := goColortoCColorRGBA(text.Color)
 		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", text.FontSize)
@@ -222,7 +222,6 @@ func main() {
 
 	app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 
-	fpsCounter := fmt.Sprintf("FPS: %.2f", app.GetFPS())
 	var children []common.IComponent
 	fpsCounterComponent := &common.Container{
 		Component: common.Component{
@@ -238,7 +237,7 @@ func main() {
 						Size:          common.Vec2{X: 100, Y: 30},
 						ID:            "fps_counter_text",
 					},
-					Text:     fpsCounter,
+					Text:     func() string { return fmt.Sprintf("FPS: %.2f", app.GetFPS()) },
 					Color:    consts.ColorRed,
 					FontSize: 24,
 				},

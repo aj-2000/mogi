@@ -29,7 +29,7 @@ func BuyNowCardComponent() common.IComponent {
 			ID:            "product_name",
 			Children:      nil,
 		},
-		Text:     "Green Rectangle",
+		Text:     func() string { return "Green Rectangle" },
 		Color:    consts.ColorWhite,
 		FontSize: 16,
 	}
@@ -42,7 +42,7 @@ func BuyNowCardComponent() common.IComponent {
 			ID:            "product_price",
 			Children:      nil,
 		},
-		Text:     "$19.99",
+		Text:     func() string { return "$19.99" },
 		Color:    consts.ColorWhite,
 		FontSize: 16,
 	}
