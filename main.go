@@ -3,11 +3,13 @@ package main
 /*
 #cgo LDFLAGS: -L./renderer/lib/Release -lrenderer -lglfw3 -lgdi32 -static
 #include "renderer/include/renderer.h"
+#include <stdlib.h>
 */
 import "C"
 import (
 	"fmt"
 	"runtime"
+	"unsafe"
 )
 
 func init() {
@@ -56,6 +58,210 @@ var ColorChocolate = C.ColorRGBA{r: 0.82, g: 0.41, b: 0.12, a: 1.0}
 var ColorSienna = C.ColorRGBA{r: 0.65, g: 0.16, b: 0.16, a: 1.0}
 var ColorPeru = C.ColorRGBA{r: 0.8, g: 0.52, b: 0.25, a: 1.0}
 var ColorBurlywood = C.ColorRGBA{r: 0.87, g: 0.72, b: 0.53, a: 1.0}
+
+// UI container
+
+type IComponent interface {
+	Type() ComponentType
+	Pos() Vec2
+	Size() Vec2
+	ID() string
+	Parent() IComponent
+	Children() []IComponent
+}
+
+type Component struct {
+	ComponentType ComponentType
+	Pos           Vec2
+	Size          Vec2
+	ID            string
+	Parent        IComponent
+	Children      []IComponent
+}
+
+type ComponentType int
+
+const (
+	TContainer ComponentType = iota
+	TText      ComponentType = iota
+	TButton    ComponentType = iota
+)
+
+type Vec2 struct {
+	X, Y float32
+}
+type Container struct {
+	Component
+}
+
+func (c *Container) Type() ComponentType {
+	return c.Component.ComponentType
+}
+
+func (c *Container) Pos() Vec2 {
+	return c.Component.Pos
+}
+
+func (c *Container) Size() Vec2 {
+	return c.Component.Size
+}
+
+func (c *Container) ID() string {
+	return c.Component.ID
+}
+
+func (c *Container) Parent() IComponent {
+	return c.Component.Parent
+}
+
+func (c *Container) Children() []IComponent {
+	return c.Component.Children
+}
+
+type Text struct {
+	Component
+	Text string
+}
+
+func (t *Text) Type() ComponentType {
+	return t.Component.ComponentType
+}
+
+func (t *Text) Pos() Vec2 {
+	return t.Component.Pos
+}
+
+func (t *Text) Size() Vec2 {
+	return t.Component.Size
+}
+
+func (t *Text) ID() string {
+	return t.Component.ID
+}
+
+func (t *Text) Parent() IComponent {
+	return t.Component.Parent
+}
+
+func (t *Text) Children() []IComponent {
+	return t.Component.Children
+}
+
+type Button struct {
+	Component
+	Text      string
+	Callback  func()
+	Pressed   bool
+	Released  bool
+	MouseOver bool
+}
+
+func (b *Button) Type() ComponentType {
+	return b.Component.ComponentType
+}
+
+func (b *Button) Pos() Vec2 {
+	return b.Component.Pos
+}
+
+func (b *Button) Size() Vec2 {
+	return b.Component.Size
+}
+
+func (b *Button) ID() string {
+	return b.Component.ID
+}
+
+func (b *Button) Parent() IComponent {
+	return b.Component.Parent
+}
+
+func (b *Button) Children() []IComponent {
+	return b.Component.Children
+}
+
+type ComponentRenderer struct {
+	Component IComponent
+}
+
+// Helper to convert Go Vec2 to C.Vec2
+func goVec2ToCVec2(v Vec2) C.Vec2 {
+	return C.Vec2{x: C.float(v.X), y: C.float(v.Y)}
+}
+
+func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
+	if cr.Component == nil {
+		return
+	}
+
+	switch cr.Component.Type() {
+	case TContainer:
+		container, ok := cr.Component.(*Container)
+		if !ok {
+			return
+		}
+		C.draw_rectangle_filled(
+			renderer,
+			C.Rect{
+				position: goVec2ToCVec2(container.Pos()),
+				width:    C.float(container.Size().X),
+				height:   C.float(container.Size().Y),
+			},
+			ColorGray,
+		)
+
+	case TText:
+		text, ok := cr.Component.(*Text)
+		if !ok {
+			return
+		}
+		cstr := C.CString(text.Text)
+		defer C.free(unsafe.Pointer(cstr))
+		font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
+		defer C.destroy_font(font)
+		C.draw_text(
+			renderer,
+			font,
+			cstr,
+			goVec2ToCVec2(text.Pos()),
+			ColorWhite,
+		)
+
+	case TButton:
+		button, ok := cr.Component.(*Button)
+		if !ok {
+			return
+		}
+		C.draw_rectangle_filled(
+			renderer,
+			C.Rect{
+				position: goVec2ToCVec2(button.Pos()),
+				width:    C.float(button.Size().X),
+				height:   C.float(button.Size().Y),
+			},
+			ColorBlue,
+		)
+		cstr := C.CString(button.Text)
+		defer C.free(unsafe.Pointer(cstr))
+		font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
+		defer C.destroy_font(font)
+		pos := Vec2{button.Pos().X + 10, button.Pos().Y + 10}
+		C.draw_text(
+			renderer,
+			font,
+			cstr,
+			goVec2ToCVec2(pos),
+			ColorWhite,
+		)
+	}
+
+	if cr.Component.Children() != nil {
+		for _, child := range cr.Component.Children() {
+			childRenderer := &ComponentRenderer{Component: child}
+			childRenderer.Render(renderer)
+		}
+	}
+}
 
 func main() {
 	renderer := C.create_renderer(C.int(800), C.int(600), C.CString("Go with C Renderer"))
@@ -134,11 +340,60 @@ func main() {
 		}
 		C.draw_line_dotted(renderer, line, ColorWhite, 2.0)
 
+		text := &Text{
+			Component: Component{
+				ComponentType: TText,
+				Pos:           Vec2{X: 10, Y: 10},
+				Size:          Vec2{X: 180, Y: 30},
+				ID:            "text1",
+				Parent:        nil,
+				Children:      nil,
+			},
+			Text: "Hello, World!",
+		}
+
+		button := &Button{
+			Component: Component{
+				ComponentType: TButton,
+				Pos:           Vec2{X: 10, Y: 50},
+				Size:          Vec2{X: 180, Y: 30},
+				ID:            "button1",
+				Parent:        nil,
+				Children:      nil,
+			},
+			Text:     "Click Me",
+			Callback: func() { fmt.Println("Button clicked!") },
+			Pressed:  false,
+			Released: false,
+		}
+
+		container := &Container{
+			Component: Component{
+				ComponentType: TContainer,
+				Pos:           Vec2{X: 50, Y: 50},
+				Size:          Vec2{X: 200, Y: 200},
+				ID:            "container1",
+				Parent:        nil,
+				Children: []IComponent{
+					text,
+					button,
+				},
+			},
+		}
+
+		// render
+		componentRenderer := &ComponentRenderer{Component: container}
+		componentRenderer.Render(renderer)
+
 		C.present_screen(renderer)
 
 		// Don't forget to process events
 		C.handle_events(renderer)
 	}
+
+	//component demo
+
+	// Set parent-child relationships
 
 	fmt.Println("Exiting")
 }
