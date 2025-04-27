@@ -1,7 +1,7 @@
 package main
 
 /*
-#cgo LDFLAGS: -L./renderer/lib/Release -lrender -lglfw3 -lgdi32 -static
+#cgo LDFLAGS: -L./renderer/lib/Release -lrenderer -lglfw3 -lgdi32 -static
 #include "renderer/include/renderer.h"
 */
 import "C"
