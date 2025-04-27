@@ -82,14 +82,16 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		}
 		cstr := C.CString(text.Text)
 		defer C.free(unsafe.Pointer(cstr))
-
+		fontSize := C.float(text.FontSize)
+		fontColor := goColortoCColorRGBA(text.Color)
+		font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), fontSize)
 		defer C.destroy_font(font)
 		C.draw_text(
 			renderer,
 			font,
 			cstr,
 			posVec2,
-			goColortoCColorRGBA(consts.ColorWhite),
+			fontColor,
 		)
 
 	case common.TButton:
@@ -205,151 +207,8 @@ func main() {
 		// }
 		// C.draw_line_dotted(renderer, line, ColorWhite, 2.0)
 
-		// text := &Text{
-		// 	Component: Component{
-		// 		ComponentType: TText,
-		// 		Pos:           Position{X: 10, Y: 10, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 180, Y: 30},
-		// 		ID:            "text1",
-		// 		Children:      nil,
-		// 	},
-		// 	Text: "Hello, World!",
-		// }
-
-		// button := &Button{
-		// 	Component: Component{
-		// 		ComponentType: TButton,
-		// 		Pos:           Position{X: 10, Y: 50, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 180, Y: 30},
-		// 		ID:            "button1",
-		// 		Children:      nil,
-		// 	},
-		// 	Text:     "Click Me",
-		// 	Callback: func() { fmt.Println("Button clicked!") },
-		// 	Pressed:  false,
-		// 	Released: false,
-		// }
-
-		// containerOne := &Container{
-		// 	Component: Component{
-		// 		ComponentType: TContainer,
-		// 		Pos:           Position{X: 0, Y: 0, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 200, Y: 400},
-		// 		ID:            "continer_one",
-		// 		Children: []IComponent{
-		// 			text,
-		// 			button,
-		// 		},
-		// 	},
-		// 	BackgroundColor: ColorRed,
-		// 	BorderColor:     ColorDarkGray,
-		// 	BorderWidth:     2.0,
-		// 	BorderRadius:    10.0,
-		// }
-
-		// containerTwo := &Container{
-		// 	Component: Component{
-		// 		ComponentType: TContainer,
-		// 		Pos:           Position{X: 210, Y: 0, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 200, Y: 400},
-		// 		ID:            "continer_two",
-		// 		Children: []IComponent{
-		// 			text,
-		// 			button,
-		// 		},
-		// 	},
-		// 	BackgroundColor: ColorCyan,
-		// 	BorderColor:     ColorGold,
-		// 	BorderWidth:     2.0,
-		// 	BorderRadius:    10.0,
-		// }
-
-		// text2 := &Text{
-		// 	Component: Component{
-		// 		ComponentType: TText,
-		// 		Pos:           Position{X: 500, Y: 50, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 180, Y: 30},
-		// 		ID:            "text2",
-		// 		Children:      nil,
-		// 	},
-		// 	Text: "Fuck, Teri Beti Suckkkkkk!",
-		// }
-
-		// var children []IComponent
-
-		// Define text2, containerOne, and containerTwo before using them
-		// text2 := &Text{
-		// 	Component: Component{
-		// 		ComponentType: TText,
-		// 		Pos:           Position{X: 500, Y: 50, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 180, Y: 30},
-		// 		ID:            "text2",
-		// 		Children:      nil,
-		// 	},
-		// 	Text: "Hello, World!",
-		// }
-
-		// button := &Button{
-		// 	Component: Component{
-		// 		ComponentType: TButton,
-		// 		Pos:           Position{X: 10, Y: 50, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 180, Y: 30},
-		// 		ID:            "button1",
-		// 		Children:      nil,
-		// 	},
-		// 	Text:     "Click Me",
-		// 	Callback: func() { fmt.Println("Button clicked!") },
-		// 	Pressed:  false,
-		// 	Released: false,
-		// }
-
-		// text := &Text{
-		// 	Component: Component{
-		// 		ComponentType: TText,
-		// 		Pos:           Position{X: 10, Y: 10, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 180, Y: 30},
-		// 		ID:            "text1",
-		// 		Children:      nil,
-		// 	},
-		// 	Text: "Hello, World!",
-		// }
-
-		// containerOne := &Container{
-		// 	Component: Component{
-		// 		ComponentType: TContainer,
-		// 		Pos:           Position{X: 0, Y: 0, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 200, Y: 400},
-		// 		ID:            "container_one",
-		// 		Children: []IComponent{
-		// 			text,
-		// 			button,
-		// 		},
-		// 	},
-		// 	BackgroundColor: ColorRed,
-		// 	BorderColor:     ColorDarkGray,
-		// 	BorderWidth:     2.0,
-		// 	BorderRadius:    10.0,
-		// }
-
-		// containerTwo := &Container{
-		// 	Component: Component{
-		// 		ComponentType: TContainer,
-		// 		Pos:           Position{X: 210, Y: 0, Type: PositionTypeRelative},
-		// 		Size:          Vec2{X: 200, Y: 400},
-		// 		ID:            "container_two",
-		// 		Children: []IComponent{
-		// 			text,
-		// 			button,
-		// 		},
-		// 	},
-		// 	BackgroundColor: ColorCyan,
-		// 	BorderColor:     ColorGold,
-		// 	BorderWidth:     2.0,
-		// 	BorderRadius:    10.0,
-		// }
-
 		// render
-		componentRenderer := &ComponentRenderer{Component: examples.ChessboardComponent()}
+		componentRenderer := &ComponentRenderer{Component: examples.BuyNowCardComponent()}
 		componentRenderer.Render(renderer)
 
 		C.present_screen(renderer)
