@@ -11,12 +11,91 @@ import (
 	"GoUI/consts"
 	"GoUI/examples"
 	"fmt"
+	"log"
 	"runtime"
 	"unsafe"
 )
 
 func init() {
 	runtime.LockOSThread()
+}
+
+type App struct {
+	fonts    map[string]*C.FontData
+	renderer unsafe.Pointer
+}
+
+func (app *App) LoadFont(path string, size float32) (*C.FontData, error) {
+	fontKey := fmt.Sprintf("%s_%f", path, size)
+	if font, ok := app.fonts[fontKey]; ok {
+		return font, nil
+	}
+
+	font := C.load_font(C.CString(path), C.float(size))
+	if font == nil {
+		return nil, fmt.Errorf("failed to load font: %s", path)
+	}
+
+	app.fonts[fontKey] = font
+	return font, nil
+}
+
+func (app *App) UnloadFont(path string, size float32) {
+	fontKey := fmt.Sprintf("%s_%f", path, size)
+	if font, ok := app.fonts[fontKey]; ok {
+		C.destroy_font(font)
+		delete(app.fonts, fontKey)
+	}
+}
+
+func (app *App) Run(root common.IComponent) {
+	if root == nil {
+		log.Fatalln("Root component is nil")
+	}
+
+	if app.renderer == nil {
+		log.Fatalln("Renderer is not initialized")
+	}
+
+	componentRenderer := &ComponentRenderer{Component: root}
+	for C.window_should_close(app.renderer) == 0 {
+		C.clear_screen(app.renderer, C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0})
+		componentRenderer.Render(app)
+		C.present_screen(app.renderer)
+		C.handle_events(app.renderer)
+	}
+}
+
+func (app *App) GetDeltaTime() float32 {
+	deltaTime := C.get_delta_time(app.renderer)
+	return float32(deltaTime)
+}
+
+func (app *App) GetFPS() float32 {
+	fps := 1.0 / app.GetDeltaTime()
+	return float32(fps)
+}
+
+func (app *App) Destroy() {
+	if app.renderer != nil {
+		C.destroy_renderer(app.renderer)
+		app.renderer = nil
+	}
+	for _, font := range app.fonts {
+		C.destroy_font(font)
+	}
+	app.fonts = nil
+}
+
+func NewApp(title string, width int, height int) *App {
+	renderer := C.create_renderer(C.int(width), C.int(height), C.CString(title))
+	if renderer == nil {
+		log.Fatalln("Failed to create renderer")
+	}
+	return &App{
+		fonts:    make(map[string]*C.FontData),
+		renderer: renderer,
+	}
 }
 
 type ComponentRenderer struct {
@@ -33,9 +112,7 @@ func goColortoCColorRGBA(color common.ColorRGBA) C.ColorRGBA {
 	}
 }
 
-func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
-	font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
-
+func (cr *ComponentRenderer) Render(app *App) {
 	if cr.Component == nil {
 		return
 	}
@@ -65,7 +142,7 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		}
 		// TODO: Add border radius and border width + only render if values are set
 		C.draw_rectangle_filled_outline(
-			renderer,
+			app.renderer,
 			C.Rect{
 				position: posVec2,
 				width:    C.float(container.Size().X),
@@ -82,12 +159,13 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		}
 		cstr := C.CString(text.Text)
 		defer C.free(unsafe.Pointer(cstr))
-		fontSize := C.float(text.FontSize)
 		fontColor := goColortoCColorRGBA(text.Color)
-		font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), fontSize)
-		defer C.destroy_font(font)
+		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", text.FontSize)
+		if err != nil {
+			log.Fatalf("Failed to load font: %v", err)
+		}
 		C.draw_text(
-			renderer,
+			app.renderer,
 			font,
 			cstr,
 			posVec2,
@@ -100,7 +178,7 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 			return
 		}
 		C.draw_rectangle_filled(
-			renderer,
+			app.renderer,
 			C.Rect{
 				position: posVec2,
 				width:    C.float(button.Size().X),
@@ -111,10 +189,14 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 		cstr := C.CString(button.Text)
 		defer C.free(unsafe.Pointer(cstr))
 
-		defer C.destroy_font(font)
+		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
+		if err != nil {
+			log.Fatalf("Failed to load font: %v", err)
+		}
+
 		pos := C.Vec2{x: posVec2.x, y: posVec2.y}
 		C.draw_text(
-			renderer,
+			app.renderer,
 			font,
 			cstr,
 			pos,
@@ -125,100 +207,62 @@ func (cr *ComponentRenderer) Render(renderer unsafe.Pointer) {
 	if cr.Component.Children() != nil {
 		for _, child := range cr.Component.Children() {
 			childRenderer := &ComponentRenderer{Component: child, Parent: cr.Component}
-			childRenderer.Render(renderer)
+			childRenderer.Render(app)
 		}
 	}
 }
 
 func main() {
-	renderer := C.create_renderer(C.int(800), C.int(800), C.CString("Go with C Renderer"))
-	defer C.destroy_renderer(renderer)
-	font := C.load_font(C.CString("JetBrainsMonoNL-Regular.ttf"), 24.0)
+	app := NewApp("GoUI", 800, 800)
+	if app == nil {
+		log.Fatalln("Failed to create app")
+	}
+	// TODO: is it needed?
+	defer app.Destroy()
 
-	if renderer == nil {
-		fmt.Println("Failed to create renderer")
-		return
+	app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
+
+	fpsCounter := fmt.Sprintf("FPS: %.2f", app.GetFPS())
+	var children []common.IComponent
+	fpsCounterComponent := &common.Container{
+		Component: common.Component{
+			ComponentType: common.TContainer,
+			Pos:           common.Position{X: 10, Y: 10},
+			Size:          common.Vec2{X: 130, Y: 28},
+			ID:            "fps_counter_background",
+			Children: []common.IComponent{
+				&common.Text{
+					Component: common.Component{
+						ComponentType: common.TText,
+						Pos:           common.Position{X: 10, Y: 0, Type: common.PositionTypeRelative},
+						Size:          common.Vec2{X: 100, Y: 30},
+						ID:            "fps_counter_text",
+					},
+					Text:     fpsCounter,
+					Color:    consts.ColorRed,
+					FontSize: 24,
+				},
+			},
+		},
+		BackgroundColor: consts.ColorGreen,
 	}
 
-	// Create color structure
-	bgColor := C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0}
-	// rectColor := C.ColorRGBA{r: 1.0, g: 0.0, b: 0.0, a: 1.0}
-
-	// // Create rectangle structure
-	// rect := C.Rect{
-	// 	position: C.Vec2{x: 100.0, y: 100.0},
-	// 	width:    200.0,
-	// 	height:   100.0,
-	// }
-
-	defer C.destroy_font(font)
-
-	for C.window_should_close(renderer) == 0 {
-		C.clear_screen(renderer, bgColor)
-		// C.draw_rectangle_filled(renderer, rect, rectColor)
-		// C.draw_rectangle_outline(renderer, rect, ColorWhite)
-		// C.draw_rectangle_filled_outline(renderer, rect, ColorGray, ColorDarkGray)
-
-		// // Example of formatted string
-		// smallFont := font                                              // Replace with actual small font if available
-		// buffer := fmt.Sprintf("Small Font Example (Size: %.0f)", 24.0) // Replace 60.0 with actual font height if available
-
-		// pos3 := C.Vec2{x: 50.0, y: 250.0}
-		// C.draw_text(renderer, smallFont, C.CString(buffer), pos3, ColorGold)
-
-		// pos4 := C.Vec2{x: 50.0, y: 280.0}
-		// C.draw_text(renderer, smallFont, C.CString("ABCDEFGHIJKLMNOPQRSTUVWXYZ"), pos4, ColorCyan)
-
-		// pos5 := C.Vec2{x: 50.0, y: 300.0}
-		// C.draw_text(renderer, smallFont, C.CString("abcdefghijklmnopqrstuvwxyz"), pos5, ColorNavy)
-
-		// pos6 := C.Vec2{x: 50.0, y: 320.0}
-		// C.draw_text(renderer, smallFont, C.CString("0123456789 .,:;!?()[]{}"), pos6, ColorOrange)
-
-		// // Create Circle struct and draw
-		// circle := C.Circle{
-		// 	position: C.Vec2{x: 400.0, y: 300.0},
-		// 	radius:   50.0,
-		// }
-		// C.draw_circle_filled(renderer, circle, ColorViolet)
-		// C.draw_circle_outline(renderer, circle, ColorBrown)
-		// C.draw_rectangle_filled_outline(renderer, rect, ColorGray, ColorDarkGray)
-
-		// // Create Line struct and draw
-		// line := C.Line{
-		// 	start: C.Vec2{x: 100.0, y: 100.0},
-		// 	end:   C.Vec2{x: 670, y: 200.0},
-		// }
-		// C.draw_line(renderer, line, ColorRed)
-		// line = C.Line{
-		// 	start: C.Vec2{x: 100.0, y: 100.0},
-		// 	end:   C.Vec2{x: 750, y: 200.0},
-		// }
-		// C.draw_line_thick(renderer, line, ColorGreen, 5.0)
-		// line = C.Line{
-		// 	start: C.Vec2{x: 100.0, y: 100.0},
-		// 	end:   C.Vec2{x: 850, y: 200.0},
-		// }
-		// C.draw_line_dashed(renderer, line, ColorBlue, 5.0, 10.0)
-
-		// line = C.Line{
-		// 	start: C.Vec2{x: 100.0, y: 100.0},
-		// 	end:   C.Vec2{x: 950, y: 200.0},
-		// }
-		// C.draw_line_dotted(renderer, line, ColorWhite, 2.0)
-
-		// render
-		componentRenderer := &ComponentRenderer{Component: examples.BuyNowCardComponent()}
-		componentRenderer.Render(renderer)
-
-		C.present_screen(renderer)
-
-		// Don't forget to process events
-		C.handle_events(renderer)
+	children = append(children, examples.ChessboardComponent(), examples.BuyNowCardComponent(), fpsCounterComponent)
+	mainContainer := &common.Container{
+		Component: common.Component{
+			ComponentType: common.TContainer,
+			Pos:           common.Position{X: 320, Y: 330},
+			Size:          common.Vec2{X: 200, Y: 310},
+			ID:            "buy_now_card",
+			Children:      children,
+		},
+		BackgroundColor: consts.ColorBlack,
+		BorderColor:     consts.ColorWhite,
+		BorderWidth:     2,
+		BorderRadius:    10,
 	}
 
-	//component demo
+	app.Run(mainContainer)
 
-	// Set parent-child relationships
 	fmt.Println("Exiting")
 }

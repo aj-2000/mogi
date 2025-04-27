@@ -575,3 +575,16 @@ void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, 
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_TEXTURE_2D);
 }
+
+float get_delta_time(void* renderer) {
+    if (!renderer) return 0.0f; 
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return 0.0f;
+    
+    static double last_time = 0.0;
+    double current_time = glfwGetTime();
+    float delta_time = (float)(current_time - last_time);
+    last_time = current_time;
+    return delta_time;
+}

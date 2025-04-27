@@ -37,8 +37,8 @@ type ComponentType int
 
 const (
 	TContainer ComponentType = iota
-	TText      ComponentType = iota
-	TButton    ComponentType = iota
+	TText
+	TButton
 )
 
 type Vec2 struct {

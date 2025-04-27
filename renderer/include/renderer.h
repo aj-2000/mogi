@@ -82,6 +82,9 @@ void destroy_font(FontData* font_data);
 void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, ColorRGBA color);
 
 
+// get delta time
+float get_delta_time(void* renderer);
+
 #ifdef __cplusplus
 }
 #endif
