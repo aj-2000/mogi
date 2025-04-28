@@ -615,3 +615,39 @@ void set_vsync(void* renderer, int vsync) {
 
     glfwSwapInterval(vsync); // Enable or disable V-Sync
 }
+
+float get_window_width(void* renderer) {
+    if (!renderer) return 0.0f; 
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return 0.0f;  // Ensure the renderer is valid
+
+    int width, height;
+    glfwGetWindowSize(ctx->window, &width, &height);
+    return (float)width;
+}
+
+float get_window_height(void* renderer) {
+    if (!renderer) return 0.0f; 
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return 0.0f;  // Ensure the renderer is valid
+
+    int width, height;
+    glfwGetWindowSize(ctx->window, &width, &height);
+    return (float)height;
+}
+
+Vec2 get_window_size(void* renderer) {
+    Vec2 size = {0.0f, 0.0f};
+    if (!renderer) return size; 
+
+    Renderer* ctx = (Renderer*)renderer;
+    if (!ctx || !ctx->window) return size;  // Ensure the renderer is valid
+
+    int width, height;
+    glfwGetWindowSize(ctx->window, &width, &height);
+    size.x = (float)width;
+    size.y = (float)height;
+    return size;
+}

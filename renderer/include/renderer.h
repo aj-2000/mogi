@@ -86,6 +86,8 @@ void draw_text(void* renderer, FontData* font_data, const char* text, Vec2 pos, 
 float get_delta_time(void* renderer);
 void set_vsync(void* renderer, int vsync);
 
+Vec2 get_window_size(void* renderer);
+
 #ifdef __cplusplus
 }
 #endif

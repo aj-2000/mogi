@@ -110,6 +110,14 @@ func (app *App) Destroy() {
 	app.fonts = nil
 }
 
+func (app *App) GetWindowSize() common.Vec2 {
+	if app.renderer == nil {
+		log.Fatalln("Renderer is not initialized")
+	}
+	size := C.get_window_size(app.renderer)
+	return common.Vec2{X: float32(size.x), Y: float32(size.y)}
+}
+
 func NewApp(title string, width int, height int) *App {
 	renderer := C.create_renderer(C.int(width), C.int(height), C.CString(title))
 	if renderer == nil {
@@ -146,7 +154,6 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 	pos := cr.Component.Pos()
 	size := cr.Component.Size()
 	cPosVec2 := C.Vec2{x: C.float(pos.X), y: C.float(pos.Y)}
-
 	// print parent with componen  type
 
 	// TODO: Layout logic for positioning children
@@ -303,15 +310,20 @@ func main() {
 		fpsCounterComponentPos.X += velocity.X
 		fpsCounterComponentPos.Y += velocity.Y
 
-		return common.NewContainer().
+		r := common.NewContainer().
 			SetID("main_container").
 			SetBackgroundColor(consts.ColorCyan).
 			SetBorderWidth(2).
 			SetBorderRadius(10).
 			AddChildren( // Add all children at once
-				examples.ChessboardComponent(),
-				examples.BuyNowCardComponent(),
+				// examples.ChessboardComponent(),
+				// examples.BuyNowCardComponent(),
 				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
 			)
+		windowSize := app.GetWindowSize()
+		layoutEngine := common.NewLayoutEngine()
+		layoutEngine.CalculateLayout(r, common.Vec2{X: windowSize.X, Y: windowSize.Y})
+
+		return r
 	})
 }
