@@ -6,49 +6,43 @@ import (
 	"strconv"
 )
 
+// ChessboardComponent creates an 8x8 chessboard using manually positioned squares.
 func ChessboardComponent() common.IComponent {
-	var children []common.IComponent
-	i := 0
-	for i < 64 {
+	boardSize := float32(800.0)
+	squareSize := boardSize / 8.0
+	children := make([]common.IComponent, 0, 64) // Pre-allocate slice capacity
+
+	for i := 0; i < 64; i++ {
 		x := i % 8
 		y := i / 8
 		isWhite := (x+y)%2 == 0
-		color := consts.ColorBlack
+
+		bgColor := consts.ColorBlack
 		if isWhite {
-			color = consts.ColorWhite
+			bgColor = consts.ColorWhite
 		}
 
-		children = append(children, common.NewContainer(common.ContainerOptions{
-			BackgroundColor: color,
-			BorderColor:     consts.ColorBlack,
-			BorderWidth:     1,
-			BorderRadius:    0,
-			Position: common.Position{
-				X:    float32(x) * 100,
-				Y:    float32(y) * 100,
-				Type: common.PositionTypeRelative,
-			},
-			ID: "chess_square_" + strconv.Itoa(i),
-			Size: common.Vec2{
-				X: 100,
-				Y: 100,
-			},
-		}))
-		i++
+		square := common.NewContainer(). // No ID needed for constructor
+							SetID("chess_square_" + strconv.Itoa(i)). // Set optional ID
+							SetBackgroundColor(bgColor).
+							SetBorderColor(consts.ColorBlack). // Explicit border color
+							SetBorderWidth(0).                 // No border width needed if colors touch
+							SetPosition(common.Position{       // Explicit position
+				X: float32(x) * squareSize,
+				Y: float32(y) * squareSize,
+			}).
+			SetSize(common.Vec2{ // Explicit size
+				X: squareSize,
+				Y: squareSize,
+			})
+		children = append(children, square)
 	}
 
-	return common.NewContainer(common.ContainerOptions{
-		BackgroundColor: consts.ColorGray,
-		BorderColor:     consts.ColorBlack,
-		BorderWidth:     0,
-		BorderRadius:    0,
-		Position: common.Position{
-			X:    0,
-			Y:    0,
-			Type: common.PositionTypeRelative,
-		},
-		ID:       "main_container",
-		Size:     common.Vec2{X: 800, Y: 800},
-		Children: children,
-	})
+	// The main container holding the board squares
+	return common.NewContainer().
+		SetID("chessboard_container"). // Optional ID for the board itself
+		// BackgroundColor defaults to transparent, no need to set if squares cover it
+		// BorderColor defaults to transparent
+		SetSize(common.Vec2{X: boardSize, Y: boardSize}). // Explicit size for the main board container
+		AddChildren(children...)
 }

@@ -126,7 +126,6 @@ func NewApp(title string, width int, height int) *App {
 
 type ComponentRenderer struct {
 	Component common.IComponent
-	Parent    common.IComponent
 }
 
 func goColorToCColorRGBA(color common.ColorRGBA) C.ColorRGBA {
@@ -138,107 +137,139 @@ func goColorToCColorRGBA(color common.ColorRGBA) C.ColorRGBA {
 	}
 }
 
-func (cr *ComponentRenderer) Render(app *App) {
+func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or RendererPtr directly
 	if cr.Component == nil {
 		return
 	}
 
+	// Get calculated position and size
 	pos := cr.Component.Pos()
-	posVec2 := C.Vec2{x: 0, y: 0}
+	size := cr.Component.Size()
+	cPosVec2 := C.Vec2{x: C.float(pos.X), y: C.float(pos.Y)}
 
+	// print parent with componen  type
+
+	// TODO: Layout logic for positioning children
 	switch pos.Type {
 	case common.PositionTypeAbsolute:
-		posVec2.x = C.float(pos.X)
-		posVec2.y = C.float(pos.Y)
+		cPosVec2.x = C.float(pos.X)
+		cPosVec2.y = C.float(pos.Y)
 	case common.PositionTypeRelative:
-		if cr.Parent != nil {
-			parentPos := cr.Parent.Pos()
-			posVec2.x = C.float(parentPos.X + pos.X)
-			posVec2.y = C.float(parentPos.Y + pos.Y)
+		if cr.Component.Parent() != nil {
+			parentPos := cr.Component.Parent().Pos()
+			cPosVec2.x = C.float(parentPos.X + pos.X)
+			cPosVec2.y = C.float(parentPos.Y + pos.Y)
 		} else {
-			posVec2.x = C.float(pos.X)
-			posVec2.y = C.float(pos.Y)
+			cPosVec2.x = C.float(pos.X)
+			cPosVec2.y = C.float(pos.Y)
 		}
 	}
 
-	switch cr.Component.Kind() {
-	case common.ContainerKind:
-		container, ok := cr.Component.(*common.Container)
-		if !ok {
-			return
-		}
+	cRect := C.Rect{
+		position: cPosVec2,
+		width:    C.float(size.X),
+		height:   C.float(size.Y),
+	}
+
+	// --- Render based on Kind ---
+	switch comp := cr.Component.(type) { // Type switch is often cleaner
+	case *common.Container:
+		// Draw container background/border
 		C.draw_rectangle_filled_outline(
-			app.renderer,
-			C.Rect{
-				position: posVec2,
-				width:    C.float(container.Size().X),
-				height:   C.float(container.Size().Y),
-			},
-			goColorToCColorRGBA(container.BackgroundColor),
-			goColorToCColorRGBA(container.BorderColor),
+			app.renderer, // Pass C renderer pointer
+			cRect,
+			goColorToCColorRGBA(comp.BackgroundColor),
+			goColorToCColorRGBA(comp.BorderColor),
+			// TODO: Add border width/radius to C function if supported
 		)
 
-	case common.TextKind:
-		text, ok := cr.Component.(*common.Text)
-		if !ok {
-			return
-		}
-		cstr := C.CString(text.Content)
+	case *common.Text:
+		// Draw text
+		cstr := C.CString(comp.Content)
 		defer C.free(unsafe.Pointer(cstr))
 
-		fontColor := goColorToCColorRGBA(text.Color)
-		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", text.FontSize)
+		fontColor := goColorToCColorRGBA(comp.Color)
+		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", comp.FontSize)
 		if err != nil {
-			log.Fatalf("Failed to load font: %v", err)
+			log.Printf("Failed to load font during render: %v", err) // Log non-fatally
+			// Potentially draw fallback text or nothing
+			return
 		}
+		if font == nil {
+			log.Printf("Font pointer is nil for %s", comp.Content)
+			return
+		}
+
+		// Adjust text position slightly? Often drawing starts at baseline bottom-left.
+		// This depends heavily on your C draw_text implementation.
+		// For simplicity, using component's top-left for now.
+		textPos := cPosVec2
+		// textPos.y += C.float(size.Y) // Example if C func expects baseline
 
 		C.draw_text(
 			app.renderer,
 			font,
 			cstr,
-			posVec2,
+			textPos,
 			fontColor,
 		)
 
-	case common.ButtonKind:
-		button, ok := cr.Component.(*common.Button)
-		if !ok {
-			return
+	case *common.Button:
+		// Determine background color based on state
+		bgColor := comp.BackgroundColor
+		if comp.Pressed {
+			bgColor = comp.PressedColor
+		} else if comp.MouseOver {
+			bgColor = comp.HoverColor
 		}
+
+		// Draw button background
 		C.draw_rectangle_filled(
 			app.renderer,
-			C.Rect{
-				position: posVec2,
-				width:    C.float(button.Size().X),
-				height:   C.float(button.Size().Y),
-			},
-			goColorToCColorRGBA(consts.ColorBlue),
+			cRect,
+			goColorToCColorRGBA(bgColor),
 		)
 
-		cstr := C.CString(button.Label)
+		// Draw button label (centered?)
+		cstr := C.CString(comp.Label)
 		defer C.free(unsafe.Pointer(cstr))
 
-		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
+		// TODO: Font loading/caching
+		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0) // Use a reasonable default or button specific size
 		if err != nil {
-			log.Fatalf("Failed to load font: %v", err)
+			log.Printf("Failed to load font during render: %v", err)
+			return
+		}
+		if font == nil {
+			log.Printf("Font pointer is nil for button %s", comp.Label)
+			return
+		}
+
+		// TODO: Calculate centered text position
+		// Needs text measurement capabilities from C or Go font library
+		textWidth := float32(len(comp.Label)) * 12.0 // Very rough estimate!
+		textHeight := float32(24.0)                  // Rough estimate!
+		textPos := C.Vec2{
+			x: C.float(float32(cPosVec2.x) + (size.X-textWidth)/2.0),
+			y: C.float(float32(cPosVec2.y) + (size.Y-textHeight)/2.0), // Adjust based on C func baseline
 		}
 
 		C.draw_text(
 			app.renderer,
 			font,
 			cstr,
-			posVec2,
-			goColorToCColorRGBA(consts.ColorWhite),
+			textPos,
+			goColorToCColorRGBA(comp.TextColor),
 		)
+
 	}
 
-	// Render Children
+	// --- Render Children ---
 	for _, child := range cr.Component.Children() {
 		childRenderer := &ComponentRenderer{
 			Component: child,
-			Parent:    cr.Component,
 		}
-		childRenderer.Render(app)
+		childRenderer.Render(app) // Pass app/renderer down
 	}
 }
 
@@ -272,18 +303,15 @@ func main() {
 		fpsCounterComponentPos.X += velocity.X
 		fpsCounterComponentPos.Y += velocity.Y
 
-		return common.NewContainer(common.ContainerOptions{
-			BackgroundColor: consts.ColorCyan,
-			BorderWidth:     2,
-			BorderRadius:    10,
-			Position:        common.Position{X: 0, Y: 0},
-			ID:              "main_container",
-			Children: []common.IComponent{
+		return common.NewContainer().
+			SetID("main_container").
+			SetBackgroundColor(consts.ColorCyan).
+			SetBorderWidth(2).
+			SetBorderRadius(10).
+			AddChildren( // Add all children at once
 				examples.ChessboardComponent(),
 				examples.BuyNowCardComponent(),
-				examples.FPSCounterComponent(fpsCounterComponentPos.X, fpsCounterComponentPos.Y, app.GetAvgFPS()),
-			},
-			Size: common.Vec2{X: 800, Y: 800},
-		})
+				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
+			)
 	})
 }
