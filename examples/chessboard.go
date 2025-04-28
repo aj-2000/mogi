@@ -3,7 +3,7 @@ package examples
 import (
 	"GoUI/common"
 	"GoUI/consts"
-	"fmt"
+	"strconv"
 )
 
 func ChessboardComponent() common.IComponent {
@@ -18,27 +18,37 @@ func ChessboardComponent() common.IComponent {
 			color = consts.ColorWhite
 		}
 
-		children = append(children, &common.Container{
-			Component: common.Component{
-				ComponentType: common.TContainer,
-				Pos:           common.Position{X: float32(x) * 100, Y: float32(y) * 100},
-				Size:          common.Vec2{X: 100, Y: 100},
-				ID:            fmt.Sprintf("box%d", i),
-				Children:      nil,
-			},
+		children = append(children, common.NewContainer(common.ContainerOptions{
 			BackgroundColor: color,
-		})
+			BorderColor:     consts.ColorBlack,
+			BorderWidth:     1,
+			BorderRadius:    0,
+			Position: common.Position{
+				X:    float32(x) * 100,
+				Y:    float32(y) * 100,
+				Type: common.PositionTypeRelative,
+			},
+			ID: "chess_square_" + strconv.Itoa(i),
+			Size: common.Vec2{
+				X: 100,
+				Y: 100,
+			},
+		}))
 		i++
 	}
 
-	return &common.Container{
-		Component: common.Component{
-			ComponentType: common.TContainer,
-			Pos:           common.Position{X: 0, Y: 0},
-			Size:          common.Vec2{X: 800, Y: 800},
-			ID:            "main_container",
-			Children:      children,
-		},
+	return common.NewContainer(common.ContainerOptions{
 		BackgroundColor: consts.ColorGray,
-	}
+		BorderColor:     consts.ColorBlack,
+		BorderWidth:     0,
+		BorderRadius:    0,
+		Position: common.Position{
+			X:    0,
+			Y:    0,
+			Type: common.PositionTypeRelative,
+		},
+		ID:       "main_container",
+		Size:     common.Vec2{X: 800, Y: 800},
+		Children: children,
+	})
 }

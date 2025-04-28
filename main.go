@@ -129,7 +129,7 @@ type ComponentRenderer struct {
 	Parent    common.IComponent
 }
 
-func goColortoCColorRGBA(color common.ColorRGBA) C.ColorRGBA {
+func goColorToCColorRGBA(color common.ColorRGBA) C.ColorRGBA {
 	return C.ColorRGBA{
 		r: C.float(color.R),
 		g: C.float(color.G),
@@ -142,6 +142,7 @@ func (cr *ComponentRenderer) Render(app *App) {
 	if cr.Component == nil {
 		return
 	}
+
 	pos := cr.Component.Pos()
 	posVec2 := C.Vec2{x: 0, y: 0}
 
@@ -149,7 +150,7 @@ func (cr *ComponentRenderer) Render(app *App) {
 	case common.PositionTypeAbsolute:
 		posVec2.x = C.float(pos.X)
 		posVec2.y = C.float(pos.Y)
-	default:
+	case common.PositionTypeRelative:
 		if cr.Parent != nil {
 			parentPos := cr.Parent.Pos()
 			posVec2.x = C.float(parentPos.X + pos.X)
@@ -160,13 +161,12 @@ func (cr *ComponentRenderer) Render(app *App) {
 		}
 	}
 
-	switch cr.Component.Type() {
-	case common.TContainer:
+	switch cr.Component.Kind() {
+	case common.ContainerKind:
 		container, ok := cr.Component.(*common.Container)
 		if !ok {
 			return
 		}
-		// TODO: Add border radius and border width + only render if values are set
 		C.draw_rectangle_filled_outline(
 			app.renderer,
 			C.Rect{
@@ -174,22 +174,24 @@ func (cr *ComponentRenderer) Render(app *App) {
 				width:    C.float(container.Size().X),
 				height:   C.float(container.Size().Y),
 			},
-			goColortoCColorRGBA(container.BackgroundColor),
-			goColortoCColorRGBA(container.BorderColor),
+			goColorToCColorRGBA(container.BackgroundColor),
+			goColorToCColorRGBA(container.BorderColor),
 		)
 
-	case common.TText:
+	case common.TextKind:
 		text, ok := cr.Component.(*common.Text)
 		if !ok {
 			return
 		}
-		cstr := C.CString(text.Text)
+		cstr := C.CString(text.Content)
 		defer C.free(unsafe.Pointer(cstr))
-		fontColor := goColortoCColorRGBA(text.Color)
+
+		fontColor := goColorToCColorRGBA(text.Color)
 		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", text.FontSize)
 		if err != nil {
 			log.Fatalf("Failed to load font: %v", err)
 		}
+
 		C.draw_text(
 			app.renderer,
 			font,
@@ -198,7 +200,7 @@ func (cr *ComponentRenderer) Render(app *App) {
 			fontColor,
 		)
 
-	case common.TButton:
+	case common.ButtonKind:
 		button, ok := cr.Component.(*common.Button)
 		if !ok {
 			return
@@ -210,9 +212,10 @@ func (cr *ComponentRenderer) Render(app *App) {
 				width:    C.float(button.Size().X),
 				height:   C.float(button.Size().Y),
 			},
-			goColortoCColorRGBA(consts.ColorBlue),
+			goColorToCColorRGBA(consts.ColorBlue),
 		)
-		cstr := C.CString(button.Text)
+
+		cstr := C.CString(button.Label)
 		defer C.free(unsafe.Pointer(cstr))
 
 		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
@@ -220,21 +223,22 @@ func (cr *ComponentRenderer) Render(app *App) {
 			log.Fatalf("Failed to load font: %v", err)
 		}
 
-		pos := C.Vec2{x: posVec2.x, y: posVec2.y}
 		C.draw_text(
 			app.renderer,
 			font,
 			cstr,
-			pos,
-			goColortoCColorRGBA(consts.ColorWhite),
+			posVec2,
+			goColorToCColorRGBA(consts.ColorWhite),
 		)
 	}
 
-	if cr.Component.Children() != nil {
-		for _, child := range cr.Component.Children() {
-			childRenderer := &ComponentRenderer{Component: child, Parent: cr.Component}
-			childRenderer.Render(app)
+	// Render Children
+	for _, child := range cr.Component.Children() {
+		childRenderer := &ComponentRenderer{
+			Component: child,
+			Parent:    cr.Component,
 		}
+		childRenderer.Render(app)
 	}
 }
 
@@ -249,48 +253,37 @@ func main() {
 	app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 
 	// TODO: should we need to expose app?
+	// Define these outside the closure to persist state across frames
+	var fpsCounterComponentPos = common.Vec2{X: 10, Y: 10}
+	var velocity = common.Vec2{X: 5, Y: 5}
+
 	app.Run(func(app *App) common.IComponent {
-		app.SetVSync(false)
-		var children []common.IComponent
-		fpsCounterComponent := &common.Container{
-			Component: common.Component{
-				ComponentType: common.TContainer,
-				Pos:           common.Position{X: 10, Y: 10},
-				Size:          common.Vec2{X: 200, Y: 28},
-				ID:            "fps_counter_background",
-				Children: []common.IComponent{
-					&common.Text{
-						Component: common.Component{
-							ComponentType: common.TText,
-							Pos:           common.Position{X: 10, Y: 0, Type: common.PositionTypeRelative},
-							Size:          common.Vec2{X: 180, Y: 30},
-							ID:            "fps_counter_text",
-						},
-						Text:     fmt.Sprintf("Avg. FPS: %.0f", app.GetAvgFPS()),
-						Color:    consts.ColorRed,
-						FontSize: 24,
-					},
-				},
-			},
-			BackgroundColor: consts.ColorGreen,
+		if fpsCounterComponentPos.X > 800-200 {
+			velocity.X = -5
+		} else if fpsCounterComponentPos.X < 0 {
+			velocity.X = 5
+		}
+		if fpsCounterComponentPos.Y > 800-28 {
+			velocity.Y = -5
+		} else if fpsCounterComponentPos.Y < 0 {
+			velocity.Y = 5
 		}
 
-		children = append(children, examples.ChessboardComponent(), examples.BuyNowCardComponent(), fpsCounterComponent)
-		mainContainer := &common.Container{
-			Component: common.Component{
-				ComponentType: common.TContainer,
-				Pos:           common.Position{X: 320, Y: 330},
-				Size:          common.Vec2{X: 200, Y: 310},
-				ID:            "buy_now_card",
-				Children:      children,
-			},
-			BackgroundColor: consts.ColorBlack,
-			BorderColor:     consts.ColorWhite,
+		fpsCounterComponentPos.X += velocity.X
+		fpsCounterComponentPos.Y += velocity.Y
+
+		return common.NewContainer(common.ContainerOptions{
+			BackgroundColor: consts.ColorCyan,
 			BorderWidth:     2,
 			BorderRadius:    10,
-		}
-		return mainContainer
+			Position:        common.Position{X: 0, Y: 0},
+			ID:              "main_container",
+			Children: []common.IComponent{
+				examples.ChessboardComponent(),
+				examples.BuyNowCardComponent(),
+				examples.FPSCounterComponent(fpsCounterComponentPos.X, fpsCounterComponentPos.Y, app.GetAvgFPS()),
+			},
+			Size: common.Vec2{X: 800, Y: 800},
+		})
 	})
-
-	fmt.Println("Exiting")
 }

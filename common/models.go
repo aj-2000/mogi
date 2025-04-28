@@ -4,7 +4,8 @@ type ColorRGBA struct {
 	R, G, B, A float32
 }
 
-// UI container
+// --- Position Types ---
+
 type PositionType int
 
 const (
@@ -17,33 +18,61 @@ type Position struct {
 	Type PositionType
 }
 
+// --- Core Interface ---
+
 type IComponent interface {
-	Type() ComponentType
+	Kind() ComponentKind
 	Pos() Position
 	Size() Vec2
 	ID() string
 	Children() []IComponent
 }
 
-type Component struct {
-	ComponentType ComponentType
-	Pos           Position
-	Size          Vec2
-	ID            string
-	Children      []IComponent
-}
-
-type ComponentType int
-
-const (
-	TContainer ComponentType = iota
-	TText
-	TButton
-)
+// --- Base Structs ---
 
 type Vec2 struct {
 	X, Y float32
 }
+
+type ComponentKind int
+
+const (
+	ContainerKind ComponentKind = iota
+	TextKind
+	ButtonKind
+)
+
+type Component struct {
+	kind     ComponentKind
+	pos      Position
+	size     Vec2
+	id       string
+	children []IComponent
+}
+
+// --- Implement IComponent automatically ---
+
+func (c *Component) Kind() ComponentKind {
+	return c.kind
+}
+
+func (c *Component) Pos() Position {
+	return c.pos
+}
+
+func (c *Component) Size() Vec2 {
+	return c.size
+}
+
+func (c *Component) ID() string {
+	return c.id
+}
+
+func (c *Component) Children() []IComponent {
+	return c.children
+}
+
+// --- Components ---
 
 type Container struct {
 	Component
@@ -53,78 +82,103 @@ type Container struct {
 	BorderRadius    float32
 }
 
-func (c *Container) Type() ComponentType {
-	return c.Component.ComponentType
-}
-
-func (c *Container) Pos() Position {
-	return c.Component.Pos
-}
-
-func (c *Container) Size() Vec2 {
-	return c.Component.Size
-}
-
-func (c *Container) ID() string {
-	return c.Component.ID
-}
-
-func (c *Container) Children() []IComponent {
-	return c.Component.Children
-}
-
 type Text struct {
 	Component
-	Text     string
+	Content  string
 	Color    ColorRGBA
 	FontSize float32
 }
 
-func (t *Text) Type() ComponentType {
-	return t.Component.ComponentType
-}
-
-func (t *Text) Pos() Position {
-	return t.Component.Pos
-}
-
-func (t *Text) Size() Vec2 {
-	return t.Component.Size
-}
-
-func (t *Text) ID() string {
-	return t.Component.ID
-}
-
-func (t *Text) Children() []IComponent {
-	return t.Component.Children
-}
-
 type Button struct {
 	Component
-	Text      string
+	Label     string
 	Callback  func()
 	Pressed   bool
 	Released  bool
 	MouseOver bool
 }
 
-func (b *Button) Type() ComponentType {
-	return b.Component.ComponentType
+// --- Constructors ---
+
+type ContainerOptions struct {
+	BackgroundColor ColorRGBA
+	BorderColor     ColorRGBA
+	BorderWidth     float32
+	BorderRadius    float32
+	Position        Position
+	ID              string
+	Children        []IComponent
+	Size            Vec2 // Optional, can be zero for default
 }
 
-func (b *Button) Pos() Position {
-	return b.Component.Pos
+func NewContainer(opts ContainerOptions) *Container {
+	return &Container{
+		Component: Component{
+			kind:     ContainerKind,
+			id:       opts.ID,
+			pos:      opts.Position,
+			size:     opts.Size,
+			children: opts.Children,
+		},
+		BackgroundColor: opts.BackgroundColor,
+		BorderColor:     opts.BorderColor, // Default black
+		BorderWidth:     opts.BorderWidth,
+		BorderRadius:    opts.BorderRadius,
+	}
 }
 
-func (b *Button) Size() Vec2 {
-	return b.Component.Size
+type TextOptions struct {
+	ID       string
+	Content  string
+	FontSize float32
+	Color    ColorRGBA
+	Position Position
+	Children []IComponent
+	Size     Vec2 // Optional, can be zero for default
 }
 
-func (b *Button) ID() string {
-	return b.Component.ID
+func NewText(opts TextOptions) *Text {
+	size := opts.Size
+	if size == (Vec2{}) {
+		size = Vec2{X: 100, Y: 30}
+	}
+	return &Text{
+		Component: Component{
+			kind:     TextKind,
+			id:       opts.ID,
+			pos:      opts.Position,
+			size:     size,
+			children: opts.Children,
+		},
+		Content:  opts.Content,
+		Color:    opts.Color,
+		FontSize: opts.FontSize,
+	}
 }
 
-func (b *Button) Children() []IComponent {
-	return b.Component.Children
+type ButtonOptions struct {
+	ID       string
+	Label    string
+	Callback func()
+	Position Position
+	Children []IComponent
+	Size     Vec2 // Optional, can be zero for default
+}
+
+func NewButton(opts ButtonOptions) *Button {
+	size := opts.Size
+	if size == (Vec2{}) {
+		size = Vec2{X: 120, Y: 40}
+	}
+	return &Button{
+		Component: Component{
+			kind:     ButtonKind,
+			id:       opts.ID,
+			pos:      opts.Position,
+			size:     size,
+			children: opts.Children,
+		},
+		Label:    opts.Label,
+		Callback: opts.Callback,
+	}
 }
