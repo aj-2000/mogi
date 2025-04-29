@@ -15,4 +15,4 @@ Circle
 Text
 Polyson
 
-Z-Index
+Z-Index in layout while calcuting pos and size

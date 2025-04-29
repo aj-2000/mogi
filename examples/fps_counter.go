@@ -12,7 +12,8 @@ func FPSCounterComponent(pos common.Vec2, avgFps float32) common.IComponent {
 	fpsText := common.NewText(fpsTextContent).
 		SetID("fps_counter_text").
 		SetFontSize(24).
-		SetColor(consts.ColorRed)
+		SetColor(consts.ColorRed).
+		SetPosition(common.Position{Type: common.PositionTypeRelative})
 
 	return common.NewContainer().
 		SetID("fps_counter").
@@ -20,5 +21,6 @@ func FPSCounterComponent(pos common.Vec2, avgFps float32) common.IComponent {
 		SetFlexEnabled(true).
 		SetJustifyContent(common.JustifyContentCenter).
 		SetAlignItems(common.AlignItemsCenter).
-		AddChild(fpsText)
+		AddChild(fpsText).
+		SetPosition(common.Position{Type: common.PositionTypeAbsolute, X: pos.X, Y: pos.Y})
 }

@@ -74,6 +74,14 @@ func (app *App) GetDeltaTime() float32 {
 	return float32(deltaTime)
 }
 
+func (app *App) CalculateTextWidth(font *C.FontData, text string) float32 {
+	cstr := C.CString(text)
+	defer C.free(unsafe.Pointer(cstr))
+
+	width := C.calculate_text_width(font, cstr)
+	return float32(width)
+}
+
 // TODO: it's not correct for some reason
 func (app *App) GetFPS() float32 {
 	deltaTime := app.GetDeltaTime()
@@ -316,14 +324,17 @@ func main() {
 			SetBorderWidth(2).
 			SetBorderRadius(10).
 			AddChildren( // Add all children at once
-				// examples.ChessboardComponent(),
-				// examples.BuyNowCardComponent(),
+				examples.ChessboardComponent(),
+				examples.BuyNowCardComponent(),
 				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
 			)
 		windowSize := app.GetWindowSize()
-		layoutEngine := common.NewLayoutEngine()
-		layoutEngine.CalculateLayout(r, common.Vec2{X: windowSize.X, Y: windowSize.Y})
+		layoutEngine := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
+			font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
+			return app.CalculateTextWidth(font, s)
+		})
+		layoutEngine.Layout(r, common.Vec2{0, 0}, common.Vec2{X: windowSize.X, Y: windowSize.Y})
 
-		return r
+		return r // Return the root component for rendering
 	})
 }

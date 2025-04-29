@@ -9,6 +9,7 @@ import (
 
 func BuyNowCardComponent() common.IComponent {
 	return common.NewContainer().
+		SetID("buy_now_card").
 		SetBackgroundColor(consts.ColorBlack).
 		SetBorderColor(consts.ColorWhite).
 		SetBorderWidth(1).
@@ -21,39 +22,28 @@ func BuyNowCardComponent() common.IComponent {
 		// SetFlexBasis(200) // Example: Give card a fixed width if needed
 		AddChild(
 			common.NewContainer().SetBackgroundColor(consts.ColorGreen).
+				SetID("green_rectangle").
 				SetSize(common.Vec2{X: 200, Y: 200}).
 				SetPosition(common.Position{
-					X:    0,
-					Y:    0,
 					Type: common.PositionTypeRelative,
 				}),
 		).
 		AddChild(
 			common.NewText("Green Rectangle").
+				SetID("green_rectangle_text").
 				SetFontSize(24).
 				SetColor(consts.ColorWhite).
 				SetPosition(common.Position{
-					X:    10,
-					Y:    210,
 					Type: common.PositionTypeRelative,
-				}).
-				SetSize(common.Vec2{
-					X: 180,
-					Y: 30,
 				}),
 		).
 		AddChild(
 			common.NewText("$19.99").
+				SetID("price_text").
 				SetFontSize(16).
 				SetColor(consts.ColorWhite).
 				SetPosition(common.Position{
-					X:    10,
-					Y:    240,
 					Type: common.PositionTypeRelative,
-				}).
-				SetSize(common.Vec2{
-					X: 180,
-					Y: 30,
 				}),
 		).
 		AddChild(
@@ -62,13 +52,7 @@ func BuyNowCardComponent() common.IComponent {
 				SetOnClick(func() { log.Println("Buy Now Clicked!") }).
 				SetBackgroundColor(consts.ColorBlue).
 				SetPosition(common.Position{
-					X:    10,
-					Y:    270,
 					Type: common.PositionTypeRelative,
-				}).
-				SetSize(common.Vec2{
-					X: 180,
-					Y: 28,
 				}),
 		).
 		SetPosition(common.Position{

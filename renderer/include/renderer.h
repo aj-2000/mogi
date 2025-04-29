@@ -87,6 +87,7 @@ float get_delta_time(void* renderer);
 void set_vsync(void* renderer, int vsync);
 
 Vec2 get_window_size(void* renderer);
+float calculate_text_width(FontData* font_data, const char* text);
 
 #ifdef __cplusplus
 }

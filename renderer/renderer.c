@@ -651,3 +651,44 @@ Vec2 get_window_size(void* renderer) {
     size.y = (float)height;
     return size;
 }
+
+float calculate_text_width(FontData* font_data, const char* text) {
+    if (!font_data || !text) return 0.0f;
+
+    float total_width = 0.0f;
+    float ascent = 0.0f;
+    stbtt_fontinfo info;
+    stbtt_InitFont(&info, font_data->ttf_buffer, stbtt_GetFontOffsetForIndex(font_data->ttf_buffer, 0));
+    int ascent_px, descent_px, lineGap_px;
+    stbtt_GetFontVMetrics(&info, &ascent_px, &descent_px, &lineGap_px);
+    ascent = ascent_px * font_data->font_height_pixels / (float)(ascent_px - descent_px);
+    total_width += ascent; // Add ascent to total width
+    
+    float current_x = 0.0f;
+    // Loop through each character in the string
+    for (const char* p = text; *p; ++p) {
+        // Check if character is in the range we packed (32-126)
+        if (*p >= FONT_FIRST_CHAR && *p < FONT_FIRST_CHAR + FONT_NUM_CHARS) {
+            stbtt_aligned_quad quad;
+            stbtt_GetPackedQuad(
+                font_data->char_data, // Character data array
+                FONT_ATLAS_WIDTH,     // Atlas width
+                FONT_ATLAS_HEIGHT,    // Atlas height
+                *p - FONT_FIRST_CHAR, // Character index (offset from first char)
+                &current_x,           // Pointer to current x position (updated by function)
+                &ascent,              // Pointer to current y position (updated by function)
+                &quad,                // Output quad structure
+                1                     // Align to pixel grid (1 = true)
+            );
+            total_width += quad.x1 - quad.x0; // Add character width to total width
+        } else {
+            // Handle characters outside the range (e.g., skip, draw '?')
+            if (*p == ' ') {
+                total_width += font_data->font_height_pixels * 0.3f; // Approximate space width
+            } else {
+                total_width += font_data->font_height_pixels * 0.5f; // Approximate unknown char width
+            }
+        }
+    }
+    return total_width; // Return the total width of the text
+}
