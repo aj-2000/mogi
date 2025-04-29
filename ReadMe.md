@@ -1,18 +1,8 @@
-goui.ButtonBegin(
-    
-)
+# Mogi
+A Simple Immediate-Mode UI Library in GO
+<!-- add image -->
 
-Card,
-Button,
-Border,
-Stack,
-Grid
-
-render
-Line
-Rect
-Circle
-Text
-Polyson
+![Mogi Logo](mogi.png)
+## TODOs
 
 Z-Index in layout while calcuting pos and size
