@@ -304,12 +304,12 @@ func main() {
 	var velocity = common.Vec2{X: 5, Y: 5}
 
 	app.Run(func(app *App) common.IComponent {
-		if fpsCounterComponentPos.X > 800-200 {
+		if fpsCounterComponentPos.X > 800-131 {
 			velocity.X = -5
 		} else if fpsCounterComponentPos.X < 0 {
 			velocity.X = 5
 		}
-		if fpsCounterComponentPos.Y > 800-28 {
+		if fpsCounterComponentPos.Y > 800-25 {
 			velocity.Y = -5
 		} else if fpsCounterComponentPos.Y < 0 {
 			velocity.Y = 5
@@ -333,7 +333,7 @@ func main() {
 			font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
 			return app.CalculateTextWidth(font, s)
 		})
-		layoutEngine.Layout(r, common.Vec2{0, 0}, common.Vec2{X: windowSize.X, Y: windowSize.Y})
+		layoutEngine.Layout(r, common.Vec2{X: 0, Y: 0}, common.Vec2{X: windowSize.X, Y: windowSize.Y})
 
 		return r // Return the root component for rendering
 	})

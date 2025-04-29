@@ -22,5 +22,5 @@ func FPSCounterComponent(pos common.Vec2, avgFps float32) common.IComponent {
 		SetJustifyContent(common.JustifyContentCenter).
 		SetAlignItems(common.AlignItemsCenter).
 		AddChild(fpsText).
-		SetPosition(common.Position{Type: common.PositionTypeAbsolute, X: pos.X, Y: pos.Y})
+		SetPosition(common.Position{X: pos.X, Y: pos.Y})
 }

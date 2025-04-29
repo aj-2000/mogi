@@ -15,6 +15,16 @@ const (
 	PositionTypeRelative                     // Flexbox handles relative positioning
 )
 
+type Display int
+
+const (
+	DisplayBlock Display = iota
+	DisplayInline
+	DisplayFlex
+	DisplayGrid
+	DisplayNone
+)
+
 type Position struct {
 	X, Y float32
 	Type PositionType
@@ -136,6 +146,7 @@ type IComponent interface {
 	Parent() IComponent // Optional getter for parent component
 	Children() []IComponent
 	FlexItem() *FlexItemProps // Accessor for flex item properties
+	Display() Display
 
 	// --- Internal Setters (used by layout engine) ---
 	// These need to be part of the interface if the layout engine
@@ -143,6 +154,7 @@ type IComponent interface {
 	// could use type assertions, but this is cleaner.
 	setPos(Position)
 	setSize(Vec2)
+	setDisplay(Display)
 	// Optional: Method to get intrinsic size (needed for flex-basis: auto)
 	// CalculateIntrinsicSize(available Vec2) Vec2
 }
@@ -156,7 +168,7 @@ type Component struct {
 	id       string
 	children []IComponent
 	parent   IComponent // Optional but useful for layout/events
-
+	display  Display
 	// Flex properties for when THIS component is an ITEM in a flex container
 	flexItemProps FlexItemProps
 }
@@ -169,6 +181,7 @@ func newComponentBase(kind ComponentKind) Component {
 		id:            "",
 		children:      make([]IComponent, 0), // Initialize slice
 		flexItemProps: NewFlexItemProps(),
+		display:       DisplayInline,
 		// pos and size start zeroed, layout engine calculates them
 	}
 }
@@ -193,7 +206,11 @@ func (c *Component) Parent() IComponent {
 
 // --- Internal Setters ---
 func (c *Component) setPos(p Position) { c.pos = p }
-func (c *Component) setSize(s Vec2)    { c.size = s }
+func (c *Component) setDisplay(d Display) {
+	c.display = d
+}
+func (c *Component) Display() Display { return c.display }
+func (c *Component) setSize(s Vec2)   { c.size = s }
 
 // --- Fluent Setters for Flex Item Properties (on Base Component) ---
 // These return *Component so they can be chained from any component type
@@ -503,7 +520,7 @@ type Button struct {
 
 // --- Button Constructor ---
 func NewButton(label string) *Button {
-	return &Button{
+	b := &Button{
 		Component: newComponentBase(ButtonKind),
 		Label:     label,
 		Callback:  func() {},
@@ -513,6 +530,9 @@ func NewButton(label string) *Button {
 		PressedColor:    ColorRGBA{0.1, 0.3, 0.7, 1},
 		TextColor:       ColorRGBA{1, 1, 1, 1}, // White
 	}
+
+	b.Component.setDisplay(DisplayBlock)
+	return b
 }
 
 // --- Fluent Setters for Button ---

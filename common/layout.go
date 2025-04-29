@@ -1,6 +1,8 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // LayoutEngine calculates component positions and sizes based on Flexbox rules.
 type LayoutEngine struct {
@@ -35,7 +37,25 @@ func (le *LayoutEngine) printComponentTree(root IComponent, indent string) {
 }
 
 func (le *LayoutEngine) populatePosition(root IComponent, startingPos Vec2) {
-
+	// log.Printf(
+	// 	"populatePosition: ID=%s, startingPos=%v, currentPos=%v, size=%v, parentPos=%v, parentSize=%v\n",
+	// 	root.ID(),
+	// 	startingPos,
+	// 	root.Pos(),
+	// 	root.Size(),
+	// 	func() *Vec2 {
+	// 		if root.Parent() != nil {
+	// 			return &Vec2{root.Parent().Pos().X, root.Parent().Pos().Y}
+	// 		}
+	// 		return nil
+	// 	}(),
+	// 	func() *Vec2 {
+	// 		if root.Parent() != nil {
+	// 			return &Vec2{root.Parent().Size().X, root.Parent().Size().Y}
+	// 		}
+	// 		return nil
+	// 	}(),
+	// )
 	if root.Pos().Type != PositionTypeAbsolute {
 		var parentPos Vec2
 		if root.Parent() != nil {
@@ -53,13 +73,17 @@ func (le *LayoutEngine) populatePosition(root IComponent, startingPos Vec2) {
 	case *Container:
 		// Calculate the position of the container's children
 		currPos := startingPos
+		longestChildHeight := float32(0.0)
 		for _, child := range comp.Children() {
 			if child.Pos().Type == PositionTypeRelative {
+				longestChildHeight = max(longestChildHeight, child.Size().Y)
+
 				// Check if child fits in current row
-				if currPos.X+child.Size().X > comp.Size().X+startingPos.X {
+				if (currPos.X+child.Size().X > comp.Size().X+startingPos.X) || child.Display() == DisplayBlock {
 					// Move to next line
 					currPos.X = startingPos.X
-					currPos.Y += child.Size().Y
+					currPos.Y += longestChildHeight
+					longestChildHeight = 0.0
 				}
 
 				le.populatePosition(child, currPos)
@@ -84,13 +108,13 @@ func (le *LayoutEngine) populateSize(root IComponent, availableSize Vec2) {
 	getSize = func(root IComponent, availableSize Vec2) Vec2 {
 		switch comp := root.(type) {
 		case *Container:
-			if comp.Size().X != 0 && comp.Size().Y != 0 {
-				return comp.Size()
-			}
 			// Calculate the size of the container based on its children
 			var totalWidth float32 = 0.0
 			var totalHeight float32 = 0.0
 			var maxWidth float32 = 0.0
+			if comp.Size().X != 0 && comp.Size().Y != 0 {
+				availableSize = comp.Size()
+			}
 			for i, child := range comp.Children() {
 				childSize := getSize(child, availableSize)
 
@@ -111,12 +135,15 @@ func (le *LayoutEngine) populateSize(root IComponent, availableSize Vec2) {
 
 			}
 			// Set the size of the container based on its children
-			containerSize := Vec2{
-				X: maxWidth,
-				Y: totalHeight}
-			comp.SetSize(containerSize)
-
-			return containerSize
+			if comp.Size().X != 0 && comp.Size().Y != 0 {
+				return comp.Size()
+			} else {
+				containerSize := Vec2{
+					X: maxWidth,
+					Y: totalHeight}
+				comp.SetSize(containerSize)
+				return containerSize
+			}
 		case *Text:
 			width := le.CalculateTextWidth(comp.Content, 24.0) + 30
 			height := 24.0

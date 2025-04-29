@@ -61,6 +61,6 @@ func BuyNowCardComponent() common.IComponent {
 		}).
 		SetSize(common.Vec2{
 			X: 200,
-			Y: 310,
+			Y: 280,
 		})
 }

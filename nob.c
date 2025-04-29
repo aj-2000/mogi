@@ -41,9 +41,13 @@ int main(int argc, char **argv) {
 
     // Check for "build-unilog" flag
     bool build_renderer = false;
+    bool run = false;
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--build-renderer") == 0 || strcmp(argv[i], "-r") == 0) {
+        if (strcmp(argv[i], "--build-renderer") == 0 || strcmp(argv[i], "-br") == 0) {
             build_renderer = true;
+        }
+        if (strcmp(argv[i], "--run") == 0 || strcmp(argv[i], "-r") == 0) {
+            run = true;
         }
     }
 
@@ -75,7 +79,6 @@ int main(int argc, char **argv) {
         nob_cmd_append(&cmd, "ar", "rcs", "./../" BUILD_DIR RENDERER_LIB_A, "./../" BUILD_DIR "/renderer.o", "./../" BUILD_DIR "/glad.o");
         if (!nob_cmd_run_sync_and_reset(&cmd)) return 1;
         if (!nob_set_current_dir(root_dir)) return 1;
-        
     }
     // TODO: move inside build-renderer
     if (!nob_copy_file(BUILD_DIR RENDERER_LIB_A, LIB_DIR RENDERER_LIB_A)) return 1;
@@ -83,8 +86,14 @@ int main(int argc, char **argv) {
     if (!nob_set_current_dir(root_dir)) return 1;
     nob_cmd_append(&cmd, "go", "build", "-o", OUTPUT_EXE, "main.go");
 
-    if (!nob_cmd_run_sync(cmd)) return 1;
-
+    if (!nob_cmd_run_async_and_reset(&cmd)) return 1;
     nob_log(NOB_INFO, "Build completed successfully.\n");
+
+    if(run){
+        nob_cmd_append(&cmd, OUTPUT_EXE);
+        if (!nob_cmd_run_async_and_reset(&cmd)) return 1;
+        nob_log(NOB_INFO, "Running %s...\n", OUTPUT_EXE);
+    }
+
     return 0;
 }
