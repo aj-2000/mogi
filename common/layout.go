@@ -37,33 +37,40 @@ func (le *LayoutEngine) printComponentTree(root IComponent, indent string) {
 func (le *LayoutEngine) populatePosition(root IComponent, startingPos Vec2) {
 
 	if root.Pos().Type != PositionTypeAbsolute {
+		var parentPos Vec2
+		if root.Parent() != nil {
+			parentPos = Vec2{root.Parent().Pos().X, root.Parent().Pos().Y}
+		}
 		pos := Position{
 			Type: PositionTypeRelative,
-			X:    startingPos.X - root.Parent().Pos().X,
-			Y:    startingPos.Y - root.Parent().Pos().Y}
+			X:    startingPos.X - parentPos.X,
+			Y:    startingPos.Y - parentPos.Y,
+		}
 		root.setPos(pos)
 	}
 
 	switch comp := root.(type) {
 	case *Container:
-		// Calculate the size of the container based on its children
+		// Calculate the position of the container's children
 		currPos := startingPos
 		for _, child := range comp.Children() {
 			if child.Pos().Type == PositionTypeRelative {
-
-				le.populatePosition(child, currPos)
-				// Check if the child fits in the available width
-				if currPos.X+child.Size().X >= child.Parent().Size().X {
-					// Move to the next line
+				// Check if child fits in current row
+				if currPos.X+child.Size().X > comp.Size().X+startingPos.X {
+					// Move to next line
 					currPos.X = startingPos.X
 					currPos.Y += child.Size().Y
 				}
-				currPos.X += child.Size().X
 
+				le.populatePosition(child, currPos)
+
+				// Move X for next child
+				currPos.X += child.Size().X
 			} else {
 				le.populatePosition(child, Vec2{child.Pos().X, child.Pos().Y})
 			}
 		}
+
 	case *Text:
 	case *Button:
 	default:
