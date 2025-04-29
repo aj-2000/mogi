@@ -21,7 +21,7 @@ func NewLayoutEngine(f func(string, float32) float32) *LayoutEngine {
 func (le *LayoutEngine) Layout(root IComponent, startingPos Vec2, availableSize Vec2) {
 	le.populateSize(root, availableSize)
 	le.populatePosition(root, startingPos)
-	le.printComponentTree(root, "  ")
+	// le.printComponentTree(root, "  ")
 	// panic("LayoutEngine.Layout: Layout calculation complete")
 }
 

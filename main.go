@@ -304,12 +304,14 @@ func main() {
 	var velocity = common.Vec2{X: 5, Y: 5}
 
 	app.Run(func(app *App) common.IComponent {
-		if fpsCounterComponentPos.X > 800-131 {
+		windowSize := app.GetWindowSize()
+
+		if fpsCounterComponentPos.X > windowSize.X-131 {
 			velocity.X = -5
 		} else if fpsCounterComponentPos.X < 0 {
 			velocity.X = 5
 		}
-		if fpsCounterComponentPos.Y > 800-25 {
+		if fpsCounterComponentPos.Y > windowSize.Y-25 {
 			velocity.Y = -5
 		} else if fpsCounterComponentPos.Y < 0 {
 			velocity.Y = 5
@@ -320,15 +322,16 @@ func main() {
 
 		r := common.NewContainer().
 			SetID("main_container").
-			SetBackgroundColor(consts.ColorCyan).
+			SetBackgroundColor(consts.ColorCyan()).
 			SetBorderWidth(2).
 			SetBorderRadius(10).
 			AddChildren( // Add all children at once
 				examples.ChessboardComponent(),
 				examples.BuyNowCardComponent(),
 				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
-			)
-		windowSize := app.GetWindowSize()
+			).
+			SetSize(windowSize)
+		// log.Printf("Window size: %v\n", windowSize)
 		layoutEngine := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
 			font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
 			return app.CalculateTextWidth(font, s)

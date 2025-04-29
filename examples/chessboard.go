@@ -36,7 +36,7 @@ func ChessboardComponent() common.IComponent {
 
 		children[i] = common.NewContainer(). // No ID needed for constructor
 							SetID("chess_square_" + strconv.Itoa(i)). // Set optional ID
-							SetBackgroundColor(bgColor).
+							SetBackgroundColor(bgColor()).
 							SetSize(common.Vec2{ // Explicit size
 				X: squareSize,
 				Y: squareSize,
