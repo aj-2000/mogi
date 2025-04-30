@@ -17,6 +17,7 @@ TODO: (Optionally, but recommended) Update the C Renderer struct to cache curren
 2. software renderer + SIMD
 3. Performance Implication: AddChildren(children...)
 4. fps timeseris graph
+5. absolute -> relative -> absolute example
 5. SetSizeMode(px, percentage)
 // TODO: Benchmarking
 // TODO: SIMD implementations

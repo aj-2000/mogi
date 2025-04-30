@@ -30,6 +30,10 @@ type Position struct {
 	Type PositionType
 }
 
+func (p Position) Vec2() Vec2 {
+	return Vec2{X: p.X, Y: p.Y}
+}
+
 type Vec2 struct {
 	X, Y float32
 }
@@ -181,6 +185,7 @@ func newComponentBase(kind ComponentKind) Component {
 		id:            "",
 		children:      make([]IComponent, 0), // Initialize slice
 		flexItemProps: NewFlexItemProps(),
+		pos:           Position{X: 0, Y: 0, Type: PositionTypeRelative},
 		display:       DisplayInline,
 		// pos and size start zeroed, layout engine calculates them
 	}
@@ -349,6 +354,11 @@ func (c *Container) SetFlexAlignSelf(align AlignItems) *Container {
 
 func (c *Container) SetFlexOrder(order int) *Container {
 	c.Component.SetOrder(order)
+	return c
+}
+
+func (c *Container) SetDisplay(d Display) *Container {
+	c.Component.setDisplay(d)
 	return c
 }
 
@@ -590,7 +600,7 @@ func (b *Button) SetSize(size Vec2) *Button {
 }
 
 func (b *Button) FontSize() float32 {
-	return 16.0 // Default font size
+	return 24.0 // Default font size
 }
 
 // --- Fluent Setters for Button Flex Item Properties ---

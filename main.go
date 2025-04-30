@@ -329,8 +329,8 @@ func main() {
 			AddChildren( // Add all children at once
 				// examples.ChessboardComponent(),
 				// examples.BuyNowCardComponent(),
-				// examples.BoxesOneComponent(),
-				examples.BoxesNLevelComponent(2, 10, 100),
+				examples.BoxesOneComponent(),
+				// examples.BoxesNLevelComponent(6, 10, 10), // 6 levels, 10 numRootChildren, 10 children per node -> Max Number of Components: 1111110
 				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
 			).
 			SetSize(windowSize)
@@ -339,7 +339,7 @@ func main() {
 			font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
 			return app.CalculateTextWidth(font, s)
 		})
-		layoutEngine.Layout(r, common.Vec2{X: 0, Y: 0}, common.Vec2{X: windowSize.X, Y: windowSize.Y})
+		layoutEngine.Layout(r, common.Vec2{X: 0, Y: 0})
 
 		return r // Return the root component for rendering
 	})
