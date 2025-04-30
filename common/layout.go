@@ -109,28 +109,29 @@ func (le *LayoutEngine) populateSize(root IComponent, availableSize Vec2) {
 		switch comp := root.(type) {
 		case *Container:
 			// Calculate the size of the container based on its children
-			var totalWidth float32 = 0.0
-			var totalHeight float32 = 0.0
+			var currWidth float32 = 0.0
+			var totalHeightTillPreviousRow float32 = 0.0
+			var currRowMaxHeight float32 = 0.0
 			var maxWidth float32 = 0.0
 			if comp.Size().X != 0 && comp.Size().Y != 0 {
 				availableSize = comp.Size()
 			}
 			for i, child := range comp.Children() {
 				childSize := getSize(child, availableSize)
+				currRowMaxHeight = max(childSize.Y, currRowMaxHeight)
 
 				if i == 0 {
-					totalHeight = childSize.Y
-					totalWidth = childSize.X
-					maxWidth = max(totalWidth, childSize.X)
+					currWidth = childSize.X
+					maxWidth = max(currWidth, childSize.X)
 				} else {
-					// Check if the child fits in the available width
-					if totalWidth+childSize.X > availableSize.X {
+					if currWidth+childSize.X > availableSize.X {
 						// Move to the next line
-						totalWidth = 0
-						totalHeight += childSize.Y
+						currWidth = 0
+						totalHeightTillPreviousRow += currRowMaxHeight
+						currRowMaxHeight = childSize.Y
 					}
-					totalWidth += childSize.X
-					maxWidth = max(maxWidth, childSize.X)
+					currWidth += childSize.X
+					maxWidth = max(maxWidth, currWidth)
 				}
 
 			}
@@ -140,7 +141,7 @@ func (le *LayoutEngine) populateSize(root IComponent, availableSize Vec2) {
 			} else {
 				containerSize := Vec2{
 					X: maxWidth,
-					Y: totalHeight}
+					Y: totalHeightTillPreviousRow + currRowMaxHeight}
 				comp.SetSize(containerSize)
 				return containerSize
 			}

@@ -116,6 +116,7 @@ func (app *App) Destroy() {
 		C.destroy_font(font)
 	}
 	app.fonts = nil
+	fmt.Printf("Avg FPS: %f\n", app.GetAvgFPS())
 }
 
 func (app *App) GetWindowSize() common.Vec2 {
@@ -136,7 +137,7 @@ func NewApp(title string, width int, height int) *App {
 		fonts:    make(map[string]*C.FontData),
 		renderer: renderer,
 	}
-	app.SetVSync(true)
+	app.SetVSync(false)
 	return app
 }
 
@@ -326,8 +327,10 @@ func main() {
 			SetBorderWidth(2).
 			SetBorderRadius(10).
 			AddChildren( // Add all children at once
-				examples.ChessboardComponent(),
-				examples.BuyNowCardComponent(),
+				// examples.ChessboardComponent(),
+				// examples.BuyNowCardComponent(),
+				// examples.BoxesOneComponent(),
+				examples.BoxesNLevelComponent(2, 10, 100),
 				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
 			).
 			SetSize(windowSize)

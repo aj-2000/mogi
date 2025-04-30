@@ -70,7 +70,10 @@ typedef struct {
 #define FONT_ATLAS_HEIGHT 512 ///< Height of the font texture atlas in pixels.
 #define FONT_FIRST_CHAR 32    ///< First ASCII character code included in the atlas (space).
 #define FONT_NUM_CHARS 95     ///< Number of consecutive characters included (ASCII 32-126).
+
+#ifndef M_PI
 #define M_PI 3.14159265358979323846 ///< Value of pi for circle calculations (if needed).
+#endif
 
 /**
  * @brief Holds data required for rendering text using a specific font.

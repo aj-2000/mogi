@@ -589,6 +589,10 @@ func (b *Button) SetSize(size Vec2) *Button {
 	return b
 }
 
+func (b *Button) FontSize() float32 {
+	return 16.0 // Default font size
+}
+
 // --- Fluent Setters for Button Flex Item Properties ---
 // These allow a Button component to act as a flex item
 
