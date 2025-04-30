@@ -95,6 +95,10 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 
 			for i, child := range c.Children() {
 				childSize := childrenSizes[i]
+				if child.Pos().Type == PositionTypeAbsolute {
+					// Skip absolutely positioned children for wrapping calculations for now (will handle at the end)
+					continue
+				}
 
 				// Determine if wrapping is needed. Use childAvailableSize.X as the limit.
 				// Wrap if not the first element on the line and adding it exceeds available width.
@@ -119,6 +123,20 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 				// If a single child is wider than available, it dictates the max width
 				maxLineWidth = max(maxLineWidth, childSize.X)
 			}
+
+			// After processing all relative children, finalize the last line's height
+			// check for absolutely positioned children that might affect the height and width
+			for i, child := range c.Children() {
+				if child.Pos().Type == PositionTypeAbsolute {
+					childSize := childrenSizes[i]
+					contentHeight = max(contentHeight, childSize.Y)
+					maxLineWidth = max(maxLineWidth, childSize.X)
+				}
+			}
+
+			// Add the height of the last line to the total content height
+			// This is necessary to ensure the container's height accounts for all children.
+			// If the last line was not empty, add its height to the total content height.
 
 			// Add the height of the last line
 			contentHeight += currentLineMaxHeight

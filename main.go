@@ -327,10 +327,11 @@ func main() {
 			SetBorderWidth(2).
 			SetBorderRadius(10).
 			AddChildren( // Add all children at once
-				// examples.ChessboardComponent(),
-				// examples.BuyNowCardComponent(),
-				examples.BoxesOneComponent(),
-				// examples.BoxesNLevelComponent(6, 10, 10), // 6 levels, 10 numRootChildren, 10 children per node -> Max Number of Components: 1111110
+				examples.ChessboardComponent(),
+				examples.BuyNowCardComponent(),
+				// examples.BoxesOneComponent(),
+				examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
+				// examples.NestedContainersComponent(),
 				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
 			).
 			SetSize(windowSize)
