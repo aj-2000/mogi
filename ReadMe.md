@@ -10,6 +10,7 @@ A Simple Immediate-Mode UI Library in GO
 3. text measure implementation
 4. nob options: debug, release, build with optimization details
 5. fix fps
+6. always correct asset path
 block
 inline
 is border prt of div size?

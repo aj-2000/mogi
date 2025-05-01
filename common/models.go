@@ -44,6 +44,7 @@ const (
 	ContainerKind ComponentKind = iota
 	TextKind
 	ButtonKind
+	ImageKind
 )
 
 // --- Flexbox Enums and Structs (from previous example) ---
@@ -634,4 +635,39 @@ func (b *Button) SetAlignSelf(align AlignItems) *Button {
 func (b *Button) SetOrder(order int) *Button {
 	b.Component.SetOrder(order)
 	return b
+}
+
+// --- Image Component ---
+type Image struct {
+	Component
+	Path string
+}
+
+// --- Image Constructor ---
+func NewImage(path string) *Image {
+	return &Image{
+		Component: newComponentBase(ImageKind),
+		Path:      path,
+	}
+}
+
+// --- Fluent Setters for Image ---
+func (i *Image) SetID(id string) *Image {
+	i.Component.SetID(id)
+	return i
+}
+
+func (i *Image) SetPosition(pos Position) *Image {
+	i.Component.setPos(pos)
+	return i
+}
+
+func (i *Image) SetSize(size Vec2) *Image {
+	i.Component.setSize(size)
+	return i
+}
+
+func (i *Image) SetDisplay(d Display) *Image {
+	i.Component.setDisplay(d)
+	return i
 }

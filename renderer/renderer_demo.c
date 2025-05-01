@@ -93,6 +93,8 @@ int main() {
     int vsync_enabled = 1; // Assume VSync is initially on (as set in create_renderer)
     int v_key_pressed_last_frame = 0;
 
+    GLuint image_texture = load_texture("../mogi.png"); // Load an image texture
+
 
     // --- Main Loop ---
     while (!window_should_close(renderer)) {
@@ -220,10 +222,16 @@ int main() {
         draw_text(renderer, font_medium, "Medium Font Example", (Vec2){20.0f, 300.0f}, cyan);
         draw_text(renderer, font_small, "Small Font Example - 0123456789 !@#$^&*()", (Vec2){20.0f, 330.0f}, green);
 
-
+        // Image example
+        Rect image_rect = {{window_size.x - 200.0f, window_size.y - 200.0f}, 180.0f, 180.0f};
+        draw_texture(renderer, image_texture, image_rect, white); // Draw the image
+        
         // --- Present ---
         present_screen(renderer);
     }
+
+    free_texture(image_texture); // Free the texture when done
+
 
     // --- Cleanup ---
     printf("Cleaning up...\n");

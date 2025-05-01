@@ -22,6 +22,7 @@ func init() {
 
 type App struct {
 	fonts       map[string]*C.FontData
+	textures    map[string]C.GLuint
 	renderer    unsafe.Pointer
 	totalTime   float64
 	totalFrames int64
@@ -48,6 +49,44 @@ func (app *App) UnloadFont(path string, size float32) {
 		C.destroy_font(font)
 		delete(app.fonts, fontKey)
 	}
+}
+
+func (app *App) LoadTexture(imagePath string) C.GLuint {
+	cImagePath := C.CString(imagePath)
+	defer C.free(unsafe.Pointer(cImagePath))
+
+	texture := C.load_texture(cImagePath)
+	if texture == 0 {
+		log.Printf("Failed to load texture: %s", imagePath)
+	}
+	return texture
+}
+
+func (app *App) LoadTextureFromMemory(imageData []byte, width, height, channels int) C.GLuint {
+	if len(imageData) == 0 {
+		return 0
+	}
+	ptr := (*C.uchar)(unsafe.Pointer(&imageData[0]))
+	texture := C.load_texture_from_memory(ptr, C.int(width), C.int(height), C.int(channels))
+	if texture == 0 {
+		log.Printf("Failed to load texture from memory")
+	}
+	return texture
+}
+
+func (app *App) UnloadTexture(texture C.GLuint) {
+	if texture != 0 {
+		C.free_texture(texture)
+	}
+}
+
+func (app *App) DrawTexture(texture C.GLuint, pos common.Vec2, size common.Vec2) {
+	cRect := C.Rect{
+		position: C.Vec2{x: C.float(pos.X), y: C.float(pos.Y)},
+		width:    C.float(size.X),
+		height:   C.float(size.Y),
+	}
+	C.draw_texture(app.renderer, texture, cRect, goColorToCColorRGBA(consts.ColorWhite()))
 }
 
 func (app *App) Run(f func(app *App) common.IComponent) {
@@ -112,10 +151,19 @@ func (app *App) Destroy() {
 		C.destroy_renderer(app.renderer)
 		app.renderer = nil
 	}
+
+	// Unload all fonts
 	for _, font := range app.fonts {
 		C.destroy_font(font)
 	}
 	app.fonts = nil
+
+	// Unload all textures
+	for _, texture := range app.textures {
+		app.UnloadTexture(texture)
+	}
+	app.textures = nil
+
 	fmt.Printf("Avg FPS: %f\n", app.GetAvgFPS())
 }
 
@@ -135,6 +183,7 @@ func NewApp(title string, width int, height int) *App {
 
 	app := &App{
 		fonts:    make(map[string]*C.FontData),
+		textures: make(map[string]C.GLuint),
 		renderer: renderer,
 	}
 	app.SetVSync(false)
@@ -278,6 +327,19 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 			goColorToCColorRGBA(comp.TextColor),
 		)
 
+	case *common.Image:
+		// Draw image
+		textureID, ok := app.textures[comp.Path]
+		if !ok {
+			textureID = app.LoadTexture(comp.Path)
+			app.textures[comp.Path] = textureID
+		}
+		if textureID == 0 {
+			log.Printf("Failed to load texture for image: %s", comp.Path)
+			return
+		}
+
+		app.DrawTexture(textureID, common.Vec2{X: float32(cPosVec2.x), Y: float32(cPosVec2.y)}, size)
 	}
 
 	// --- Render Children ---

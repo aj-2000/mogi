@@ -295,6 +295,42 @@ float calculate_text_width(FontData* font_data, const char* text);
 
 
 // =============================================================================
+// Image Loading and Texture Management
+// =============================================================================
+/**
+ * @brief Loads an image from a file and creates an OpenGL texture.
+ * @param file_path Path to the image file (e.g., PNG, JPEG).
+ * @return The OpenGL texture ID, or 0 on failure.
+ */
+GLuint load_texture(const char* file_path);
+
+/**
+ * @brief Loads an image from memory and creates an OpenGL texture.
+ * @param image_data Pointer to the image data in memory.
+ * @param width Width of the image in pixels.
+ * @param height Height of the image in pixels.
+ * @param channels Number of color channels in the image (e.g., 3 for RGB, 4 for RGBA).
+ * @note The image data must be in a format compatible with OpenGL (e.g., RGB or RGBA).
+ * @return The OpenGL texture ID, or 0 on failure.
+ */
+GLuint load_texture_from_memory(const unsigned char* image_data, int width, int height, int);
+
+/**
+ * @brief Frees the OpenGL texture associated with the given texture ID.
+ * @param texture_id The OpenGL texture ID to free.
+ */
+void free_texture(GLuint texture_id);
+
+/**
+ * @brief Draws a texture on the screen.
+ * @param renderer_ptr Renderer context.
+ * @param texture_id The OpenGL texture ID to draw.
+ * @param rect The rectangle where the texture should be drawn (position and size).
+ * @param color The color to tint the texture (RGBA).
+ */
+void draw_texture(void* renderer_ptr, GLuint texture_id, Rect rect, ColorRGBA color);
+
+// =============================================================================
 // Utilities / Getters
 // =============================================================================
 

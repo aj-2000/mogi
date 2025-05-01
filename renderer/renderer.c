@@ -11,6 +11,8 @@
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "external/stb/stb_truetype.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "external/stb/stb_image.h"
 
 // --- Debug Printf ---
 int dprintf(const char *format, ...) {
@@ -693,3 +695,100 @@ float calculate_text_width(FontData* font_data, const char* text) {
 
     return total_width;
 }
+
+// --- Image & Texture Loading ---
+GLuint load_texture(const char* image_path) {
+    // Load image using stb_image
+    int width, height, channels;
+    unsigned char* data = stbi_load(image_path, &width, &height, &channels, 0);
+    if (!data) {
+        fprintf(stderr, "ERROR: Failed to load image: %s\n", image_path);
+        return 0; // Return 0 for failure
+    }
+
+    // Generate OpenGL texture ID
+    GLuint texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+
+    // Set texture parameters (optional)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // Linear filtering
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload texture data to GPU
+    GLenum format = (channels == 3) ? GL_RGB : (channels == 4) ? GL_RGBA : GL_RED; // Handle different formats
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+    // Free image data after uploading to GPU
+    stbi_image_free(data);
+
+    // Unbind the texture (optional)
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    dprintf("Texture loaded: %s (ID: %u)\n", image_path, texture_id);
+    return texture_id;
+}
+
+GLuint load_texture_from_memory(const unsigned char* image_data, int width, int height, int channels) {
+    if (!image_data || width <= 0 || height <= 0 || (channels != 1 && channels != 3 && channels != 4)) {
+        fprintf(stderr, "ERROR: Invalid image data or dimensions\n");
+        return 0; // Return 0 for failure
+    }
+
+    // Generate OpenGL texture ID
+    GLuint texture_id;
+    glGenTextures(1, &texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+
+    // Set texture parameters (optional)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); // Linear filtering
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Upload texture data to GPU
+    GLenum format = (channels == 3) ? GL_RGB : (channels == 4) ? GL_RGBA : GL_RED; // Handle different formats
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, image_data);
+
+    // Unbind the texture (optional)
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    dprintf("Texture loaded from memory (ID: %u)\n", texture_id);
+    return texture_id;
+}
+
+void free_texture(GLuint texture_id) {
+    if (texture_id > 0) {
+        glDeleteTextures(1, &texture_id);
+        dprintf("Texture freed (ID: %u)\n", texture_id);
+    } else {
+        fprintf(stderr, "ERROR: Invalid texture ID for deletion\n");
+    }
+}
+
+void draw_texture(void* renderer_ptr, GLuint texture_id, Rect rect, ColorRGBA color) {
+    Renderer* ctx = (Renderer*)renderer_ptr;
+    if (!ctx || !ctx->window || texture_id == 0) return;
+    // dprintf("Drawing texture ID %u at (%f, %f), width: %f, height: %f\n", texture_id, rect.position.x, rect.position.y, rect.width, rect.height);
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texture_id);
+    glColor4f(color.r, color.g, color.b, color.a);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0f, 0.0f); glVertex2f(rect.position.x, rect.position.y); // Top-left
+    glTexCoord2f(1.0f, 0.0f); glVertex2f(rect.position.x + rect.width, rect.position.y); // Top-right
+    glTexCoord2f(1.0f, 1.0f); glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Bottom-right
+    glTexCoord2f(0.0f, 1.0f); glVertex2f(rect.position.x, rect.position.y + rect.height); // Bottom-left
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
+}
+
+
+
+
+

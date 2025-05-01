@@ -183,6 +183,8 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 			calculatedSize.Y = fixedSize.Y
 		}
 
+	case *Image:
+		calculatedSize = c.Size()
 	default:
 		// Consider logging a warning instead of panicking for unknown types?
 		panic(fmt.Sprintf("Unsupported component type for size calculation: %T", comp))
@@ -296,13 +298,7 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 			currentLineMaxHeight = max(currentLineMaxHeight, childSize.Y)
 		}
 
-	case *Text:
-		// Leaf node. Position was set by its parent container if relative.
-		// Absolute positioning was handled when calculating contentOrigin.
-		// No children to position.
-		break
-
-	case *Button:
+	case *Text, *Button, *Image:
 		// Leaf node. Position was set by its parent container if relative.
 		// Absolute positioning was handled when calculating contentOrigin.
 		// No children to position.

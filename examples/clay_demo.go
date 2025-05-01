@@ -16,6 +16,8 @@ func ClayDemoComponent(windowSize common.Vec2) common.IComponent {
 	tileHeight := float32(55)
 	firstTileHeight := tileHeight + 15
 	imageWidth := firstTileHeight - 2*padding
+	mogiWidth := float32(512)
+	mogiHeight := float32(512)
 	return common.NewContainer().
 		SetID("clay_demo_container").
 		SetBackgroundColor(consts.ColorWhite()).
@@ -36,10 +38,9 @@ func ClayDemoComponent(windowSize common.Vec2) common.IComponent {
 						AddChildren(
 							// Stub for a future image
 							// TODO: use self size etc to center self
-							common.NewContainer().
+							common.NewImage("mogi.png").
 								SetID("tile_1_image").
 								SetSize(common.Vec2{X: imageWidth, Y: imageWidth}).
-								SetBackgroundColor(consts.ColorBlue()).
 								SetPosition(common.Position{X: 3 * padding, Y: 3 * padding, Type: common.PositionTypeAbsolute}),
 							common.NewText("Mogi - UI library").
 								SetID("tile_1_text").
@@ -77,6 +78,11 @@ func ClayDemoComponent(windowSize common.Vec2) common.IComponent {
 				SetID("right_column").
 				SetBackgroundColor(consts.ColorSkin()).
 				SetPosition(common.Position{X: leftColumnWidth + 2*padding, Y: padding, Type: common.PositionTypeAbsolute}).
-				SetSize(common.Vec2{X: rightColumnWidth, Y: columnHeight}),
+				SetSize(common.Vec2{X: rightColumnWidth, Y: columnHeight}).
+				AddChildren(
+					common.NewImage("mogi.png").SetID("image_1").
+						SetSize(common.Vec2{X: mogiWidth, Y: mogiHeight}).
+						SetPosition(common.Position{X: 2*padding + leftColumnWidth + (rightColumnWidth / 2) - mogiWidth/2, Y: padding + columnHeight/2 - mogiHeight/2, Type: common.PositionTypeAbsolute}),
+				),
 		)
 }
