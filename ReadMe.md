@@ -4,10 +4,12 @@ A Simple Immediate-Mode UI Library in GO
 
 ![Mogi Logo](mogi.png)
 ## TODOs
-
+0. padding, margin -> gap
 1. Z-Index in layout while calcuting pos and size
 2. gcc renderer_demo.c  renderer.c -Iinclude -Iexternal\glfw -Iexternal\glad -Llib\Release -lrenderer -lglfw3 -lopengl32 -lgdi32 (in nob)
 3. text measure implementation
+4. nob options: debug, release, build with optimization details
+5. fix fps
 block
 inline
 is border prt of div size?
@@ -19,6 +21,22 @@ TODO: (Optionally, but recommended) Update the C Renderer struct to cache curren
 4. fps timeseris graph
 5. absolute -> relative -> absolute example
 5. SetSizeMode(px, percentage)
+6. Stack Optimization
+7. Nice API i think, SetLayout(common.NewGridLayout().
+			SetColumns(2).
+			SetRows(2).
+			SetColumnGap(10).
+			SetRowGap(10).
+			SetColumnStretch(1, 1).
+			SetRowStretch(1, 1).
+			SetColumnStretch(2, 1).
+			SetRowStretch(2, 1).
+			SetColumnStretch(3, 1).
+8. internal component should be private
+9. compoent ctx in some methods, for example i need text component size to manually set pos
+10. easy way to achieve this: // Standard C code like loops etc work inside components
+11. verify if draw_font -> font correct size
+12. UUID ID
 // TODO: Benchmarking
 // TODO: SIMD implementations
 // TODO: bezier curves
@@ -33,4 +51,7 @@ Layered effects (e.g., shadows behind specific shapes).
 Masking parts of a texture or image.
 
 Complex shapes without modifying geometry.
+
+DevTools
+1. Onhover -> border, pos, size
 

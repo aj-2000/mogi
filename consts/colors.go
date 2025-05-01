@@ -20,6 +20,7 @@ var (
 	colorPurple      = common.ColorRGBA{R: 0.5, G: 0, B: 0.5, A: 1}
 	colorBrown       = common.ColorRGBA{R: 0.6, G: 0.3, B: 0.2, A: 1}
 	colorTransparent = common.ColorRGBA{R: 0, G: 0, B: 0, A: 0}
+	colorSkin        = common.ColorRGBA{R: 0.9, G: 0.8, B: 0.7, A: 1}
 )
 
 func ColorRed() common.ColorRGBA         { return colorRed }
@@ -36,3 +37,4 @@ func ColorPink() common.ColorRGBA        { return colorPink }
 func ColorPurple() common.ColorRGBA      { return colorPurple }
 func ColorBrown() common.ColorRGBA       { return colorBrown }
 func ColorTransparent() common.ColorRGBA { return colorTransparent }
+func ColorSkin() common.ColorRGBA        { return colorSkin }

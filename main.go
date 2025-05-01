@@ -301,25 +301,9 @@ func main() {
 
 	// TODO: should we need to expose app?
 	// Define these outside the closure to persist state across frames
-	var fpsCounterComponentPos = common.Vec2{X: 10, Y: 10}
-	var velocity = common.Vec2{X: 5, Y: 5}
 
 	app.Run(func(app *App) common.IComponent {
 		windowSize := app.GetWindowSize()
-
-		if fpsCounterComponentPos.X > windowSize.X-131 {
-			velocity.X = -5
-		} else if fpsCounterComponentPos.X < 0 {
-			velocity.X = 5
-		}
-		if fpsCounterComponentPos.Y > windowSize.Y-25 {
-			velocity.Y = -5
-		} else if fpsCounterComponentPos.Y < 0 {
-			velocity.Y = 5
-		}
-
-		fpsCounterComponentPos.X += velocity.X
-		fpsCounterComponentPos.Y += velocity.Y
 
 		r := common.NewContainer().
 			SetID("main_container").
@@ -330,9 +314,10 @@ func main() {
 				examples.ChessboardComponent(),
 				examples.BuyNowCardComponent(),
 				// examples.BoxesOneComponent(),
-				examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
+				// examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
 				// examples.NestedContainersComponent(),
-				examples.FPSCounterComponent(fpsCounterComponentPos, app.GetAvgFPS()),
+				examples.ClayDemoComponent(windowSize),
+				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20}, app.GetAvgFPS()),
 			).
 			SetSize(windowSize)
 		// log.Printf("Window size: %v\n", windowSize)
