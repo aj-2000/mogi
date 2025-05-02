@@ -37,7 +37,6 @@ func (le *LayoutEngine) Layout(root IComponent, origin Vec2, availableSize Vec2)
 
 	// Optional: Print the final tree for debugging
 	le.printComponentTree(root, " ")
-	panic("Layout calculation complete")
 }
 
 // printComponentTree is a helper for debugging the layout structure.
@@ -229,8 +228,8 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 		// Use the size calculated in the first pass.
 
 		// Track position within the current line for relative layout.
-		currentLineXOffset := float32(0.0) + comp.Padding().X
-		currentLineYOffset := float32(0.0) + comp.Padding().Y
+		currentLineXOffset := float32(0.0) + comp.Padding().X + comp.Border().X
+		currentLineYOffset := float32(0.0) + comp.Padding().Y + comp.Border().Y
 		currentLineMaxHeight := float32(0.0)
 
 		// Iterate through children to position them.
@@ -265,9 +264,9 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 
 			// If wrapping is needed, move to the start of the next line.
 			if needsWrap {
-				currentLineYOffset += currentLineMaxHeight // Add height of the completed line.
-				currentLineXOffset = comp.Padding().X      // Reset X offset for the new line.
-				currentLineMaxHeight = 0                   // Reset max height for the new line.
+				currentLineYOffset += currentLineMaxHeight              // Add height of the completed line.
+				currentLineXOffset = comp.Padding().X + comp.Border().X // Reset X offset for the new line.
+				currentLineMaxHeight = 0                                // Reset max height for the new line.
 			}
 
 			// Calculate the child's position *relative* to this container's content origin.

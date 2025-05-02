@@ -70,7 +70,7 @@ typedef struct {
 #define FONT_ATLAS_HEIGHT 512 ///< Height of the font texture atlas in pixels.
 #define FONT_FIRST_CHAR 32    ///< First ASCII character code included in the atlas (space).
 #define FONT_NUM_CHARS 95     ///< Number of consecutive characters included (ASCII 32-126).
-
+#define ROUNDED_RECT_CORNER_SEGMENTS 64 ///< Number of segments for rounded corners.
 #ifndef M_PI
 #define M_PI 3.14159265358979323846 ///< Value of pi for circle calculations (if needed).
 #endif
@@ -172,31 +172,19 @@ void set_vsync(void* renderer_ptr, int vsync);
 // =============================================================================
 
 // --- Rectangles ---
-/**
- * @brief Draws the outline of a rectangle.
- * @param renderer_ptr Renderer context.
- * @param rect The rectangle's position and dimensions.
- * @param color The color of the outline.
- */
-void draw_rectangle_outline(void* renderer_ptr, Rect rect, ColorRGBA color);
 
 /**
- * @brief Draws a solid, filled rectangle.
- * @param renderer_ptr Renderer context.
- * @param rect The rectangle's position and dimensions.
- * @param color The fill color.
+ * Draws a filled rectangle with an outlined border and rounded corners.
+ *
+ * @param renderer_ptr   Pointer to the renderer context.
+ * @param rect           The rectangle specifying the position and size.
+ * @param fill_color     The color used to fill the rectangle.
+ * @param outline_thickness The thickness of the rectangle's outline.
+ * @param outline_color  The color used for the rectangle's outline.
+ * @param radius         The radius of the rounded corners.
  */
-void draw_rectangle_filled(void* renderer_ptr, Rect rect, ColorRGBA color);
 
-/**
- * @brief Draws a filled rectangle with an outline.
- * @param renderer_ptr Renderer context.
- * @param rect The rectangle's position and dimensions.
- * @param fill_color The fill color.
- * @param outline_color The outline color.
- */
-void draw_rectangle_filled_outline(void* renderer_ptr, Rect rect, ColorRGBA fill_color, ColorRGBA outline_color);
-
+void draw_rectangle_filled_border_rounded(void* renderer_ptr, Rect rect, ColorRGBA fill_color, Vec2 border_width, ColorRGBA border_color, float radius);
 
 // --- Circles ---
 /**

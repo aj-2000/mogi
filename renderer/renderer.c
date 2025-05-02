@@ -243,46 +243,167 @@ Vec2 get_window_size(void* renderer_ptr) {
 
 // --- Drawing Functions (Minor changes, mostly adding checks/constants) ---
 
-// Draw a filled rectangle (RGBA)
-void draw_rectangle_filled(void* renderer_ptr, Rect rect, ColorRGBA color) {
-    Renderer* ctx = (Renderer*)renderer_ptr;
-    if (!ctx || !ctx->window) return;
-    // dprintf("Drawing filled rectangle at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);
+// Helper function (same as before) to draw a single filled rounded rectangle
+static void draw_single_filled_rounded_rect(
+    Rect r, ColorRGBA color, float radius, int segments
+) {
+    // Clamp radius to half the shortest side
+    float max_radius_x = r.width / 2.0f;
+    float max_radius_y = r.height / 2.0f;
+    if (radius < 0.0f) radius = 0.0f;
+    // Allow radius slightly larger than half for degenerate cases,
+    // but clamp reasonably if w/h are positive.
+    if (r.width > 0.001f && radius > max_radius_x) radius = max_radius_x;
+    if (r.height > 0.001f && radius > max_radius_y) radius = max_radius_y;
 
-    glDisable(GL_TEXTURE_2D); // Ensure texturing is off
+    // If dimensions are zero or negative, don't draw
+    if (r.width <= 0.0f || r.height <= 0.0f) {
+        return;
+    }
+
+    // If radius is negligible, just draw a regular rectangle
+    if (radius < 0.01f) {
+        glColor4f(color.r, color.g, color.b, color.a);
+        glBegin(GL_QUADS); // Use QUADS for simple rect
+        glVertex2f(r.position.x, r.position.y);
+        glVertex2f(r.position.x + r.width, r.position.y);
+        glVertex2f(r.position.x + r.width, r.position.y + r.height);
+        glVertex2f(r.position.x, r.position.y + r.height);
+        glEnd();
+        return;
+    }
+
+    // Calculate corner centers (relative to r.position.x, r.position.y)
+    float cx_tl = r.position.x + radius; // Top-Left X
+    float cy_tl = r.position.y + radius; // Top-Left Y
+
+    float cx_tr = r.position.x + r.width - radius; // Top-Right X
+    float cy_tr = r.position.y + radius;      // Top-Right Y
+
+    float cx_bl = r.position.x + radius;         // Bottom-Left X
+    float cy_bl = r.position.y + r.height - radius; // Bottom-Left Y
+
+    float cx_br = r.position.x + r.width - radius; // Bottom-Right X
+    float cy_br = r.position.y + r.height - radius; // Bottom-Right Y
+
+    // Set the color
     glColor4f(color.r, color.g, color.b, color.a);
 
-    // Use GL_QUADS (though deprecated, matches original code)
-    glBegin(GL_QUADS);
-    glVertex2f(rect.position.x, rect.position.y); // Top-left
-    glVertex2f(rect.position.x + rect.width, rect.position.y); // Top-right
-    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Bottom-right
-    glVertex2f(rect.position.x, rect.position.y + rect.height); // Bottom-left
+    // Use a triangle fan for efficiency
+    glBegin(GL_TRIANGLE_FAN);
+
+    // Start with a center point (geometric center of the rectangle)
+    glVertex2f(r.position.x + r.width / 2.0f, r.position.y + r.height / 2.0f);
+
+    // Bottom-Right Corner (0 to PI/2)
+    for (int i = 0; i <= segments; ++i) {
+        float angle = (float)M_PI / 2.0f * ((float)i / (float)segments);
+        float vx = cx_br + radius * cosf(angle);
+        float vy = cy_br + radius * sinf(angle);
+        glVertex2f(vx, vy);
+    }
+
+    // Bottom-Left Corner (PI/2 to PI)
+    for (int i = 0; i <= segments; ++i) {
+        float angle = (float)M_PI / 2.0f
+            + (float)M_PI / 2.0f * ((float)i / (float)segments);
+        float vx = cx_bl + radius * cosf(angle);
+        float vy = cy_bl + radius * sinf(angle);
+        glVertex2f(vx, vy);
+    }
+
+    // Top-Left Corner (PI to 3*PI/2)
+    for (int i = 0; i <= segments; ++i) {
+        float angle = (float)M_PI
+            + (float)M_PI / 2.0f * ((float)i / (float)segments);
+        float vx = cx_tl + radius * cosf(angle);
+        float vy = cy_tl + radius * sinf(angle);
+        glVertex2f(vx, vy);
+    }
+
+    // Top-Right Corner (3*PI/2 to 2*PI)
+    for (int i = 0; i <= segments; ++i) {
+        float angle = (float)M_PI * 3.0f / 2.0f
+            + (float)M_PI / 2.0f * ((float)i / (float)segments);
+        float vx = cx_tr + radius * cosf(angle);
+        float vy = cy_tr + radius * sinf(angle);
+        glVertex2f(vx, vy);
+    }
+
+    // Close the fan
+    glVertex2f(cx_br + radius, cy_br); // Vertex at angle 0
+
     glEnd();
 }
 
-// Draw a rectangle outline (RGBA)
-void draw_rectangle_outline(void* renderer_ptr, Rect rect, ColorRGBA color) {
-    Renderer* ctx = (Renderer*)renderer_ptr;
-    if (!ctx || !ctx->window) return;
-    // dprintf("Drawing rectangle outline at (%f, %f), width: %f, height: %f\n", rect.position.x, rect.position.y, rect.width, rect.height);
+// Main function (BORDER-BOX implementation)
+void draw_rectangle_filled_border_rounded(
+    void* renderer_ptr, // Unused in this immediate mode example
+    Rect rect,          // Represents the OUTER boundary (including border)
+    ColorRGBA fill_color,
+    Vec2 border_width,
+    ColorRGBA border_color,
+    float radius       // Radius of the OUTER corners
+) {
+    // Silence unused parameter warning if necessary
+    (void)renderer_ptr;
 
-    glDisable(GL_TEXTURE_2D);
-    glColor4f(color.r, color.g, color.b, color.a);
+    // Basic validation/clamping
+    if (border_width.x < 0.0f) border_width.x = 0.0f;
+    if (border_width.y < 0.0f) border_width.y = 0.0f;
+    if (radius < 0.0f) radius = 0.0f;
 
-    glBegin(GL_LINE_LOOP);
-    glVertex2f(rect.position.x, rect.position.y); // Top-left
-    glVertex2f(rect.position.x + rect.width, rect.position.y); // Top-right
-    glVertex2f(rect.position.x + rect.width, rect.position.y + rect.height); // Bottom-right
-    glVertex2f(rect.position.x, rect.position.y + rect.height); // Bottom-left
-    glEnd();
-}
+    // --- 1. Draw the outer rectangle (border background) ---
+    // The input 'rect' defines the outer bounds.
+    // We draw this first with the border color.
+    // Ensure the outer rectangle has positive dimensions before drawing.
+    if (rect.width > 0.0f && rect.height > 0.0f) {
+        draw_single_filled_rounded_rect(
+            rect, border_color, radius, ROUNDED_RECT_CORNER_SEGMENTS
+        );
+    } else {
+        // If outer dimensions are zero or negative, nothing to draw.
+        return;
+    }
 
-// Draw a filled rectangle with outline (RGBA)
-void draw_rectangle_filled_outline(void* renderer_ptr, Rect rect, ColorRGBA fill_color, ColorRGBA outline_color) {
-    // No context check needed here as called functions do it
-    draw_rectangle_filled(renderer_ptr, rect, fill_color);
-    draw_rectangle_outline(renderer_ptr, rect, outline_color);
+    // --- 2. Calculate the inner rectangle (fill area) ---
+    Rect inner_rect;
+    inner_rect.position.x = rect.position.x + border_width.x;
+    inner_rect.position.y = rect.position.y + border_width.y;
+    inner_rect.width = rect.width - 2.0f * border_width.x;
+    inner_rect.height = rect.height - 2.0f * border_width.y;
+
+    // --- 3. Calculate the inner radius ---
+    // Reduce the outer radius by the border thickness.
+    // Use the larger border width component to ensure the inner curve
+    // doesn't exceed the outer curve boundary.
+    float inner_radius =
+        radius - fmaxf(border_width.x, border_width.y);
+    if (inner_radius < 0.0f) {
+        inner_radius = 0.0f;
+    }
+
+    // --- 4. Draw the inner rectangle (fill) ---
+    // Only draw the inner rectangle if its dimensions are positive
+    // and border width is > 0 (otherwise fill is same as border rect)
+    if (inner_rect.width > 0.0f && inner_rect.height > 0.0f
+        && (border_width.x > 0.0f || border_width.y > 0.0f)) {
+        draw_single_filled_rounded_rect(
+            inner_rect, fill_color, inner_radius, ROUNDED_RECT_CORNER_SEGMENTS
+        );
+    } else if (border_width.x <= 0.0f && border_width.y <= 0.0f) {
+        // If there's no border, the "fill" is the same as the outer rect,
+        // but we need to draw it with the fill_color instead of border_color.
+        // We already drew with border_color, so redraw with fill_color.
+        // (Alternatively, check border width *before* step 1)
+         if (rect.width > 0.0f && rect.height > 0.0f) {
+            draw_single_filled_rounded_rect(
+                rect, fill_color, radius, ROUNDED_RECT_CORNER_SEGMENTS
+            );
+         }
+    }
+    // If inner dimensions are non-positive due to large border,
+    // the border color simply fills the entire area (already drawn).
 }
 
 // Draw a circle (using GL_TRIANGLE_FAN for filled)

@@ -4,7 +4,7 @@ A Simple Immediate-Mode UI Library in GO
 
 ![Mogi Logo](mogi.png)
 ## TODOs
-0. padding, margin->  border border radius -> gap
+0. padding, margin->  border, border radius -> gap
 1. Z-Index in layout while calcuting pos and size
 2. gcc renderer_demo.c  renderer.c -Iinclude -Iexternal\glfw -Iexternal\glad -Llib\Release -lrenderer -lglfw3 -lopengl32 -lgdi32 (in nob)
 3. text measure implementation
@@ -43,6 +43,8 @@ TODO: (Optionally, but recommended) Update the C Renderer struct to cache curren
 14. easy to make custom component
 15. tailwind colors
 16. cache absolute position?
+17. modern opengl
+18. border,padding,border - t,b,r,l
 // TODO: Benchmarking
 // TODO: SIMD implementations
 // TODO: bezier curves

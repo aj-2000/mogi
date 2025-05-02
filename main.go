@@ -220,16 +220,21 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 		height:   C.float(size.Y),
 	}
 
+	cBorderWidth := C.Vec2{x: C.float(cr.Component.Border().X), y: C.float(cr.Component.Border().Y)}
+	borderRadius := C.float(cr.Component.BorderRadius())
+	borderColor := goColorToCColorRGBA(cr.Component.BorderColor())
+
 	// --- Render based on Kind ---
 	switch comp := cr.Component.(type) { // Type switch is often cleaner
 	case *common.Container:
 		// Draw container background/border
-		C.draw_rectangle_filled_outline(
+		C.draw_rectangle_filled_border_rounded(
 			app.renderer, // Pass C renderer pointer
 			cRect,
 			goColorToCColorRGBA(comp.BackgroundColor),
-			goColorToCColorRGBA(comp.BorderColor),
-			// TODO: Add border width/radius to C function if supported
+			cBorderWidth,
+			borderColor,
+			borderRadius,
 		)
 
 	case *common.Text:
@@ -273,10 +278,13 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 		}
 
 		// Draw button background
-		C.draw_rectangle_filled(
+		C.draw_rectangle_filled_border_rounded(
 			app.renderer,
 			cRect,
 			goColorToCColorRGBA(bgColor),
+			cBorderWidth,
+			borderColor,
+			borderRadius,
 		)
 
 		// Draw button label (centered?)
@@ -357,17 +365,15 @@ func main() {
 		r := common.NewContainer().
 			SetID("main_container").
 			SetBackgroundColor(consts.ColorCyan()).
-			SetBorderWidth(2).
-			SetBorderRadius(10).
 			AddChildren( // Add all children at once
 				// examples.ChessboardComponent(),
 				// examples.BuyNowCardComponent(),
 				// examples.BoxesOneComponent(),
-				examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
+				// examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
 				// examples.NestedContainersComponent(),
 				// examples.ClayDemoComponent(windowSize),
-				// examples.ExampleMarginPaddingBorder(),
-				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20}, app.GetFPS()),
+				examples.ExampleMarginPaddingBorder(),
+				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 225, Y: 20}, app.GetAvgFPS()),
 			).
 			SetSize(windowSize)
 		// log.Printf("Window size: %v\n", windowSize)
