@@ -186,7 +186,7 @@ func NewApp(title string, width int, height int) *App {
 		textures: make(map[string]C.GLuint),
 		renderer: renderer,
 	}
-	app.SetVSync(false)
+	app.SetVSync(true)
 	return app
 }
 
@@ -209,26 +209,10 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 	}
 
 	// Get calculated position and size
-	pos := cr.Component.Pos()
+	pos := cr.Component.AbsolutePos()
 	size := cr.Component.Size()
 	cPosVec2 := C.Vec2{x: C.float(pos.X), y: C.float(pos.Y)}
 	// print parent with componen  type
-
-	// TODO: Layout logic for positioning children
-	switch pos.Type {
-	case common.PositionTypeAbsolute:
-		cPosVec2.x = C.float(pos.X)
-		cPosVec2.y = C.float(pos.Y)
-	case common.PositionTypeRelative:
-		if cr.Component.Parent() != nil {
-			parentPos := cr.Component.Parent().Pos()
-			cPosVec2.x = C.float(parentPos.X + pos.X)
-			cPosVec2.y = C.float(parentPos.Y + pos.Y)
-		} else {
-			cPosVec2.x = C.float(pos.X)
-			cPosVec2.y = C.float(pos.Y)
-		}
-	}
 
 	cRect := C.Rect{
 		position: cPosVec2,
@@ -309,7 +293,6 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 			log.Printf("Font pointer is nil for button %s", comp.Label)
 			return
 		}
-
 		// TODO: Calculate centered text position
 		// Needs text measurement capabilities from C or Go font library
 		textWidth := float32(len(comp.Label)) * 12.0 // Very rough estimate!
@@ -338,8 +321,8 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 			log.Printf("Failed to load texture for image: %s", comp.Path)
 			return
 		}
-
-		app.DrawTexture(textureID, common.Vec2{X: float32(cPosVec2.x), Y: float32(cPosVec2.y)}, size)
+		pos := common.Vec2{X: float32(cPosVec2.x), Y: float32(cPosVec2.y)}
+		app.DrawTexture(textureID, pos, size)
 	}
 
 	// --- Render Children ---
@@ -363,6 +346,10 @@ func main() {
 
 	// TODO: should we need to expose app?
 	// Define these outside the closure to persist state across frames
+	layoutEngine := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
+		font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
+		return app.CalculateTextWidth(font, s)
+	})
 
 	app.Run(func(app *App) common.IComponent {
 		windowSize := app.GetWindowSize()
@@ -373,22 +360,19 @@ func main() {
 			SetBorderWidth(2).
 			SetBorderRadius(10).
 			AddChildren( // Add all children at once
-				examples.ChessboardComponent(),
-				examples.BuyNowCardComponent(),
+				// examples.ChessboardComponent(),
+				// examples.BuyNowCardComponent(),
 				// examples.BoxesOneComponent(),
-				// examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
+				examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
 				// examples.NestedContainersComponent(),
-				examples.ClayDemoComponent(windowSize),
-				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20}, app.GetAvgFPS()),
+				// examples.ClayDemoComponent(windowSize),
+				// examples.ExampleMarginPaddingBorder(),
+				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20}, app.GetFPS()),
 			).
 			SetSize(windowSize)
 		// log.Printf("Window size: %v\n", windowSize)
-		layoutEngine := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
-			font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
-			return app.CalculateTextWidth(font, s)
-		})
-		layoutEngine.Layout(r, common.Vec2{X: 0, Y: 0})
 
+		layoutEngine.Layout(r, common.Vec2{}, common.Vec2{X: windowSize.X, Y: windowSize.Y})
 		return r // Return the root component for rendering
 	})
 }

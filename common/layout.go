@@ -27,16 +27,17 @@ func NewLayoutEngine(f func(string, float32) float32) *LayoutEngine {
 
 // Layout computes the layout for the component tree starting at root.
 // availableSize provides the initial constraints for the root component.
-func (le *LayoutEngine) Layout(root IComponent, availableSize Vec2) {
+func (le *LayoutEngine) Layout(root IComponent, origin Vec2, availableSize Vec2) {
 	// Pass 1: Calculate intrinsic sizes (bottom-up)
 	le.calculateSizeRecursive(root, availableSize)
 
 	// Pass 2: Calculate positions (top-down)
 	// Root component starts at (0, 0) relative to its own frame.
-	le.calculatePositionRecursive(root, Vec2{X: 0, Y: 0})
+	le.calculatePositionRecursive(root, origin)
 
 	// Optional: Print the final tree for debugging
-	// le.printComponentTree(root, " ")
+	le.printComponentTree(root, " ")
+	panic("Layout calculation complete")
 }
 
 // printComponentTree is a helper for debugging the layout structure.
@@ -48,7 +49,7 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 	if len(children) > 0 {
 		// fmt.Printf("%s  Children:\n", indent)
 		for _, child := range children {
-			le.printComponentTree(child, indent+"  ")
+			le.printComponentTree(child, indent+"	")
 		}
 	}
 }
@@ -57,6 +58,7 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 // the leaves and moving up. It respects fixed sizes and calculates content-based
 // sizes otherwise. availableSize provides the width constraint for wrapping.
 func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Vec2) Vec2 {
+
 	// Use component's fixed size if provided
 	fixedSize := comp.Size() // Assuming Size() returns the pre-set size
 	hasFixedWidth := fixedSize.X > 0
@@ -69,12 +71,12 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 		// If container has fixed dimensions, use them as constraints for children
 		childAvailableSize := availableSize
 		if hasFixedWidth {
-			childAvailableSize.X = fixedSize.X
+			childAvailableSize.X = fixedSize.X - comp.Padding().X - comp.Border().X
 		}
 		if hasFixedHeight {
 			// Height constraint isn't typically used for width calculation
 			// but could be relevant for scrollable content later.
-			childAvailableSize.Y = fixedSize.Y
+			childAvailableSize.Y = fixedSize.Y - comp.Padding().Y - comp.Border().Y
 		}
 
 		// Calculate children sizes first
@@ -112,12 +114,12 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 					maxLineWidth = max(maxLineWidth, currentLineWidth)
 
 					// Start new line
-					currentLineWidth = childSize.X
-					currentLineMaxHeight = childSize.Y
+					currentLineWidth = childSize.X + 2*c.Margin().X
+					currentLineMaxHeight = childSize.Y + 2*child.Margin().Y
 				} else {
 					// Add to current line
-					currentLineWidth += childSize.X
-					currentLineMaxHeight = max(currentLineMaxHeight, childSize.Y)
+					currentLineWidth += childSize.X + 2*c.Margin().X
+					currentLineMaxHeight = max(currentLineMaxHeight, childSize.Y+2*child.Margin().Y)
 				}
 
 				// If a single child is wider than available, it dictates the max width
@@ -192,8 +194,15 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 		// calculatedSize = Vec2{X: 0, Y: 0}
 	}
 
-	// Set the final calculated or fixed size on the component
-	comp.setSize(calculatedSize) // Use the internal setter
+	if !hasFixedWidth {
+		calculatedSize.X += 2 * (comp.Padding().X + comp.Border().X) // Include padding and border in width
+	}
+	if !hasFixedHeight {
+		calculatedSize.Y += 2 * (comp.Padding().Y + comp.Border().Y) // Include padding and border in height
+	}
+
+	comp.setSize(calculatedSize) // Set the calculated size on the component
+	// Use the internal setter
 	return calculatedSize
 }
 
@@ -202,27 +211,15 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 // parentTopLeft is the absolute coordinate where the parent *starts* placing this component.
 func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLeft Vec2) {
 	compPosInfo := comp.Pos()
-	compSize := comp.Size() // Use size calculated in the first pass
-
-	// Determine the absolute top-left coordinate for this component's content area.
-	// This is where its children will be placed relative to.
-	var contentOrigin Vec2
 	if compPosInfo.Type == PositionTypeAbsolute {
-		// If comp is absolute, its content starts at its calculated absolute position.
-		contentOrigin = Vec2{
-			X: parentTopLeft.X + compPosInfo.X, // parentTopLeft is origin, compPosInfo has offset
-			Y: parentTopLeft.Y + compPosInfo.Y,
-		}
-		// Note: We are NOT setting the component's own position here again.
-		// Its absolute nature is defined by its Type and X/Y offsets relative to parent.
-		// The rendering logic should use parent's absolute pos + this comp's relative offsets.
-	} else {
-		// If comp is relative, its content starts exactly where the parent placed it.
-		// The parent's loop already calculated the correct X/Y offset and set it via setPos.
-		// parentTopLeft represents the absolute coordinate corresponding to the relative (0,0)
-		// point *within* the parent where this component was placed.
-		contentOrigin = parentTopLeft
+		parentTopLeft.X = compPosInfo.X
+		parentTopLeft.Y = compPosInfo.Y
 	}
+
+	containerSize := comp.Size()
+	containerSize.X -= comp.Padding().X + comp.Border().X
+	containerSize.Y -= comp.Padding().Y + comp.Border().Y
+	var contentOrigin Vec2 = parentTopLeft
 
 	// Now, handle the layout *within* this component (positioning its children)
 	switch c := comp.(type) {
@@ -230,17 +227,18 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 		// Use the determined contentOrigin for placing children.
 		containerContentOrigin := contentOrigin
 		// Use the size calculated in the first pass.
-		containerSize := compSize
 
 		// Track position within the current line for relative layout.
-		currentLineXOffset := float32(0.0)
-		currentLineYOffset := float32(0.0)
+		currentLineXOffset := float32(0.0) + comp.Padding().X
+		currentLineYOffset := float32(0.0) + comp.Padding().Y
 		currentLineMaxHeight := float32(0.0)
 
 		// Iterate through children to position them.
 		for _, child := range c.Children() {
 			childPosInfo := child.Pos()
-			childSize := child.Size() // Use size calculated in the first pass
+			childSize := child.Size()
+			childSize.X += 2 * child.Margin().X // Include margin in size for wrapping calculations
+			childSize.Y += 2 * child.Margin().Y // Include margin in size for wrapping calculations
 
 			// Handle absolutely positioned children first.
 			if childPosInfo.Type == PositionTypeAbsolute {
@@ -268,15 +266,15 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 			// If wrapping is needed, move to the start of the next line.
 			if needsWrap {
 				currentLineYOffset += currentLineMaxHeight // Add height of the completed line.
-				currentLineXOffset = 0                     // Reset X offset for the new line.
+				currentLineXOffset = comp.Padding().X      // Reset X offset for the new line.
 				currentLineMaxHeight = 0                   // Reset max height for the new line.
 			}
 
 			// Calculate the child's position *relative* to this container's content origin.
 			childRelativePos := Position{
-				Type: PositionTypeRelative, // Ensure type is set correctly.
-				X:    currentLineXOffset,
-				Y:    currentLineYOffset,
+				Type: PositionTypeRelative,                  // Ensure type is set correctly.
+				X:    currentLineXOffset + child.Margin().X, // Add margin to the relative position
+				Y:    currentLineYOffset + child.Margin().Y, // Add margin to the relative position
 			}
 
 			// Attempt to set the calculated relative position on the child component.
@@ -285,8 +283,8 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 			// Calculate the child's absolute top-left screen coordinate.
 			// This is needed as the reference point (`parentTopLeft`) for positioning the child's *own* children.
 			childAbsoluteTopLeft := Vec2{
-				X: containerContentOrigin.X + childRelativePos.X, // Parent origin + child relative offset
-				Y: containerContentOrigin.Y + childRelativePos.Y, // Parent origin + child relative offset
+				X: containerContentOrigin.X + currentLineXOffset, // Parent origin + child relative offset
+				Y: containerContentOrigin.Y + currentLineYOffset, // Parent origin + child relative offset
 			}
 
 			// Recursively call positioning for the child's children.

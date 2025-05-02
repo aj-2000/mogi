@@ -148,6 +148,13 @@ type IComponent interface {
 	Size() Vec2    // Size calculated by layout engine
 	ID() string
 	SetParent(p IComponent)
+	SetMargin(margin Vec2)
+	Margin() Vec2
+	Padding() Vec2
+	Border() Vec2
+	SetPadding(padding Vec2)
+	AbsolutePos() Vec2
+	SetBorder(border Vec2)
 	Parent() IComponent // Optional getter for parent component
 	Children() []IComponent
 	FlexItem() *FlexItemProps // Accessor for flex item properties
@@ -174,6 +181,9 @@ type Component struct {
 	children []IComponent
 	parent   IComponent // Optional but useful for layout/events
 	display  Display
+	margin   Vec2 // Margin for layout (if needed)
+	padding  Vec2 // Padding for layout (if needed)
+	border   Vec2 // Border for layout (if needed)
 	// Flex properties for when THIS component is an ITEM in a flex container
 	flexItemProps FlexItemProps
 }
@@ -200,9 +210,31 @@ func (c *Component) Size() Vec2               { return c.size }
 func (c *Component) ID() string               { return c.id }
 func (c *Component) Children() []IComponent   { return c.children }
 func (c *Component) FlexItem() *FlexItemProps { return &c.flexItemProps }
+func (c *Component) Margin() Vec2             { return c.margin }
+func (c *Component) Padding() Vec2            { return c.padding }
+func (c *Component) Border() Vec2             { return c.border }
+
+func (c *Component) AbsolutePos() Vec2 {
+	if c.parent != nil {
+		return Vec2{
+			X: c.pos.X + c.parent.AbsolutePos().X,
+			Y: c.pos.Y + c.parent.AbsolutePos().Y,
+		}
+	}
+	return c.pos.Vec2()
+}
 
 func (c *Component) SetParent(p IComponent) {
 	c.parent = p
+}
+
+func (c *Component) SetMargin(margin Vec2) { c.margin = margin }
+func (c *Component) SetPadding(padding Vec2) {
+	c.padding = padding
+}
+func (c *Component) SetBorder(border Vec2) { c.border = border }
+func (c *Component) SetDisplay(d Display) {
+	c.display = d
 }
 
 // Optional Getter
@@ -272,12 +304,16 @@ type Container struct {
 
 // --- Container Constructor ---
 func NewContainer() *Container {
-	return &Container{
+	c := &Container{
 		Component:          newComponentBase(ContainerKind),
 		flexContainerProps: NewFlexContainerProps(),
 		BackgroundColor:    ColorRGBA{0, 0, 0, 0}, // Default transparent
 		BorderColor:        ColorRGBA{0, 0, 0, 0}, // Default transparent
 	}
+	c.SetMargin(Vec2{X: 0, Y: 3})  // Default margin
+	c.SetPadding(Vec2{X: 0, Y: 4}) // Default padding
+	c.SetBorder(Vec2{X: 0, Y: 0})  // Default border
+	return c
 }
 
 // --- Fluent Setters for Container Visual Properties ---
@@ -435,12 +471,16 @@ type Text struct {
 
 // --- Text Constructor ---
 func NewText(content string) *Text {
-	return &Text{
+	t := &Text{
 		Component: newComponentBase(TextKind),
 		Content:   content,
 		Color:     ColorRGBA{0, 0, 0, 1}, // Default black
 		FontSize:  16.0,                  // Default font size
 	}
+	t.SetMargin(Vec2{X: 5, Y: 5})   // Default margin
+	t.SetPadding(Vec2{X: 10, Y: 5}) // Default padding
+	t.SetBorder(Vec2{X: 1, Y: 1})   // Default border
+	return t
 }
 
 // --- Fluent Setters for Text ---
@@ -541,7 +581,9 @@ func NewButton(label string) *Button {
 		PressedColor:    ColorRGBA{0.1, 0.3, 0.7, 1},
 		TextColor:       ColorRGBA{1, 1, 1, 1}, // White
 	}
-
+	b.SetMargin(Vec2{X: 5, Y: 5})   // Default margin
+	b.SetPadding(Vec2{X: 10, Y: 5}) // Default padding
+	b.SetBorder(Vec2{X: 1, Y: 1})   // Default border
 	b.Component.setDisplay(DisplayBlock)
 	return b
 }
@@ -645,10 +687,14 @@ type Image struct {
 
 // --- Image Constructor ---
 func NewImage(path string) *Image {
-	return &Image{
+	i := &Image{
 		Component: newComponentBase(ImageKind),
 		Path:      path,
 	}
+	i.SetMargin(Vec2{X: 5, Y: 5})   // Default margin
+	i.SetPadding(Vec2{X: 10, Y: 5}) // Default padding
+	i.SetBorder(Vec2{X: 1, Y: 1})   // Default border
+	return i
 }
 
 // --- Fluent Setters for Image ---
