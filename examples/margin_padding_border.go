@@ -3,45 +3,35 @@ package examples
 import (
 	"mogi/common"
 	"mogi/consts"
+	"strconv"
 )
 
 func ExampleMarginPaddingBorder() common.IComponent {
+	numBoxes := 64
+	boxSize := float32(50.0)
+	boxes := make([]common.IComponent, numBoxes)
+	for i := range boxes {
+		boxes[i] = common.NewContainer().
+			SetID("box_" + strconv.Itoa(i+1)).
+			SetSize(common.Vec2{X: boxSize, Y: boxSize}).
+			SetBackgroundColor(common.ColorRGBA{
+				R: float32(i) / float32(numBoxes),
+				G: float32(i) / float32(numBoxes),
+				B: float32(i) / float32(numBoxes),
+				A: 1.0,
+			}).
+			SetMargin(common.Vec2{X: 5, Y: 5}).
+			AddChild(
+				common.NewText("Box " + strconv.Itoa(i+1)).
+					SetID("text_" + strconv.Itoa(i+1)).
+					SetFontSize(12).
+					SetColor(consts.ColorRed()))
+	}
 
 	return common.NewContainer().
 		SetID("example_mpb_main_container").
-		SetBackgroundColor(consts.ColorWhite()).
+		SetBackgroundColor(consts.ColorOrange()).
 		AddChildren(
-			common.NewContainer().
-				SetID("container_1").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorBlue()),
-			common.NewContainer().
-				SetID("container_2").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorGreen()),
-			common.NewContainer().
-				SetID("container_3").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorCyan()),
-			common.NewContainer().
-				SetID("container_4").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorMagenta()),
-			common.NewContainer().
-				SetID("container_5").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorRed()),
-			common.NewContainer().
-				SetID("container_6").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorSkin()),
-			common.NewContainer().
-				SetID("container_7").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorYellow()),
-			common.NewContainer().
-				SetID("container_8").
-				SetSize(common.Vec2{X: 100, Y: 100}).
-				SetBackgroundColor(consts.ColorPurple()),
+			boxes...,
 		)
 }

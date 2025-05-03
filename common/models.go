@@ -149,18 +149,16 @@ type IComponent interface {
 	Pos() Position // Position calculated by layout engine
 	Size() Vec2    // Size calculated by layout engine
 	ID() string
-	SetParent(p IComponent)
-	SetMargin(margin Vec2)
-	SetBorderRadius(radius float32)
+
 	BorderColor() ColorRGBA
-	SetBorderColor(color ColorRGBA)
 	Margin() Vec2
 	Padding() Vec2
 	Border() Vec2
+	Gap() Vec2
 	BorderRadius() float32
-	SetPadding(padding Vec2)
+	SetParent(p IComponent)
+
 	AbsolutePos() Vec2
-	SetBorder(border Vec2)
 	Parent() IComponent // Optional getter for parent component
 	Children() []IComponent
 	FlexItem() *FlexItemProps // Accessor for flex item properties
@@ -172,7 +170,14 @@ type IComponent interface {
 	// could use type assertions, but this is cleaner.
 	setPos(Position)
 	setSize(Vec2)
+	setGap(gap Vec2)
+	setMargin(margin Vec2)
+	setBorderRadius(radius float32)
 	setDisplay(Display)
+	setBorderColor(color ColorRGBA)
+	setBorder(border Vec2)
+	setPadding(padding Vec2)
+
 	// Optional: Method to get intrinsic size (needed for flex-basis: auto)
 	// CalculateIntrinsicSize(available Vec2) Vec2
 }
@@ -191,6 +196,7 @@ type Component struct {
 	padding      Vec2 // Padding for layout (if needed)
 	border       Vec2 // Border for layout (if needed)
 	borderRadius float32
+	gap          Vec2      // Gap for flex container (if needed)
 	borderColor  ColorRGBA // Default black
 	// Flex properties for when THIS component is an ITEM in a flex container
 	flexItemProps FlexItemProps
@@ -225,10 +231,8 @@ func (c *Component) FlexItem() *FlexItemProps { return &c.flexItemProps }
 func (c *Component) Margin() Vec2             { return c.margin }
 func (c *Component) Padding() Vec2            { return c.padding }
 func (c *Component) Border() Vec2             { return c.border }
+func (c *Component) Gap() Vec2                { return c.gap }
 func (c *Component) BorderColor() ColorRGBA   { return c.borderColor }
-func (c *Component) SetBorderColor(color ColorRGBA) {
-	c.borderColor = color
-}
 
 func (c *Component) AbsolutePos() Vec2 {
 	if c.parent != nil {
@@ -244,21 +248,7 @@ func (c *Component) SetParent(p IComponent) {
 	c.parent = p
 }
 
-func (c *Component) SetMargin(margin Vec2) { c.margin = margin }
-func (c *Component) SetPadding(padding Vec2) {
-	c.padding = padding
-}
-func (c *Component) SetBorder(border Vec2) { c.border = border }
-func (c *Component) SetBorderRadius(radius float32) {
-	if radius < 0 {
-		radius = 0
-	}
-	c.borderRadius = radius
-}
 func (c *Component) BorderRadius() float32 { return c.borderRadius }
-func (c *Component) SetDisplay(d Display) {
-	c.display = d
-}
 
 // Optional Getter
 func (c *Component) Parent() IComponent {
@@ -270,8 +260,23 @@ func (c *Component) setPos(p Position) { c.pos = p }
 func (c *Component) setDisplay(d Display) {
 	c.display = d
 }
-func (c *Component) Display() Display { return c.display }
-func (c *Component) setSize(s Vec2)   { c.size = s }
+func (c *Component) Display() Display      { return c.display }
+func (c *Component) setSize(s Vec2)        { c.size = s }
+func (c *Component) setMargin(margin Vec2) { c.margin = margin }
+func (c *Component) setPadding(padding Vec2) {
+	c.padding = padding
+}
+func (c *Component) setBorder(border Vec2) { c.border = border }
+func (c *Component) setBorderRadius(radius float32) {
+	if radius < 0 {
+		radius = 0
+	}
+	c.borderRadius = radius
+}
+func (c *Component) setGap(gap Vec2) { c.gap = gap }
+func (c *Component) setBorderColor(color ColorRGBA) {
+	c.borderColor = color
+}
 
 // --- Fluent Setters for Flex Item Properties (on Base Component) ---
 // These return *Component so they can be chained from any component type
@@ -329,11 +334,12 @@ func NewContainer() *Container {
 		flexContainerProps: NewFlexContainerProps(),
 		BackgroundColor:    ColorRGBA{0, 0, 0, 0}, // Default transparent
 	}
-	c.SetMargin(Vec2{X: 3, Y: 3})                       // Default margin
-	c.SetPadding(Vec2{X: 4, Y: 4})                      // Default padding
-	c.SetBorder(Vec2{X: 2, Y: 2})                       // Default border
-	c.SetBorderColor(ColorRGBA{R: 1, G: 1, B: 1, A: 1}) // white
-	c.SetBorderRadius(10)                               // Default border radius
+	// c.SetMargin(Vec2{X: 3, Y: 3})                       // Default margin
+	// c.SetPadding(Vec2{X: 4, Y: 4})                      // Default padding
+	// c.SetBorder(Vec2{X: 2, Y: 2})                       // Default border
+	// c.SetBorderColor(ColorRGBA{R: 1, G: 1, B: 1, A: 1}) // white
+	// c.SetBorderRadius(10)                               // Default border radius
+	// c.SetGap(Vec2{X: 5, Y: 5})                          // Default gap for flex items
 	return c
 }
 
@@ -358,6 +364,36 @@ func (c *Container) SetPosition(pos Position) *Container {
 
 func (c *Container) SetSize(size Vec2) *Container {
 	c.Component.setSize(size)
+	return c
+}
+
+func (c *Container) SetMargin(margin Vec2) *Container {
+	c.Component.setMargin(margin)
+	return c
+}
+
+func (c *Container) SetPadding(padding Vec2) *Container {
+	c.Component.setPadding(padding)
+	return c
+}
+
+func (c *Container) SetBorder(border Vec2) *Container {
+	c.Component.setBorder(border)
+	return c
+}
+
+func (c *Container) SetBorderRadius(radius float32) *Container {
+	c.Component.setBorderRadius(radius)
+	return c
+}
+
+func (c *Container) SetBorderColor(color ColorRGBA) *Container {
+	c.Component.setBorderColor(color)
+	return c
+}
+
+func (c *Container) SetGap(gap Vec2) *Container {
+	c.Component.setGap(gap)
 	return c
 }
 
@@ -431,14 +467,6 @@ func (c *Container) SetAlignContent(align AlignItems) *Container {
 	return c
 }
 
-func (c *Container) SetGap(gap float32) *Container {
-	if gap < 0 {
-		gap = 0
-	}
-	c.flexContainerProps.Gap = gap
-	return c
-}
-
 // --- Add Child Method ---
 // In common/container.go
 func (c *Container) AddChild(child IComponent) *Container {
@@ -477,9 +505,6 @@ func NewText(content string) *Text {
 		Color:     ColorRGBA{0, 0, 0, 1}, // Default black
 		FontSize:  16.0,                  // Default font size
 	}
-	t.SetMargin(Vec2{X: 0, Y: 0})  // Default margin
-	t.SetPadding(Vec2{X: 4, Y: 4}) // Default padding
-	t.SetBorder(Vec2{X: 1, Y: 1})  // Default border
 	return t
 }
 
@@ -581,9 +606,6 @@ func NewButton(label string) *Button {
 		PressedColor:    ColorRGBA{0.1, 0.3, 0.7, 1},
 		TextColor:       ColorRGBA{1, 1, 1, 1}, // White
 	}
-	b.SetMargin(Vec2{X: 5, Y: 5})   // Default margin
-	b.SetPadding(Vec2{X: 10, Y: 5}) // Default padding
-	b.SetBorder(Vec2{X: 1, Y: 1})   // Default border
 	b.Component.setDisplay(DisplayBlock)
 	return b
 }
@@ -691,9 +713,6 @@ func NewImage(path string) *Image {
 		Component: newComponentBase(ImageKind),
 		Path:      path,
 	}
-	i.SetMargin(Vec2{X: 5, Y: 5})   // Default margin
-	i.SetPadding(Vec2{X: 10, Y: 5}) // Default padding
-	i.SetBorder(Vec2{X: 1, Y: 1})   // Default border
 	return i
 }
 

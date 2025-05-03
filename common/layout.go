@@ -36,14 +36,20 @@ func (le *LayoutEngine) Layout(root IComponent, origin Vec2, availableSize Vec2)
 	le.calculatePositionRecursive(root, origin)
 
 	// Optional: Print the final tree for debugging
-	// le.printComponentTree(root, "	")
+	fmt.Println("--- Layout Complete ---")
+	le.printComponentTree(root, "")
+	fmt.Println("---------------------")
 }
 
 // printComponentTree is a helper for debugging the layout structure.
 func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
-	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v)]\n",
+	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Padding:%.1f,%.1f Margin:%.1f,%.1f Gap:%.1f,%.1f Border:%.1f,%.1f]\n",
 		indent, comp.ID(), comp.Size().X, comp.Size().Y,
-		comp.Pos().X, comp.Pos().Y, comp.Pos().Type)
+		comp.Pos().X, comp.Pos().Y, comp.Pos().Type,
+		comp.Padding().X, comp.Padding().Y,
+		comp.Margin().X, comp.Margin().Y,
+		comp.Gap().X, comp.Gap().Y,
+		comp.Border().X, comp.Border().Y)
 	children := comp.Children()
 	if len(children) > 0 {
 		// fmt.Printf("%s  Children:\n", indent)
@@ -57,7 +63,6 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 // the leaves and moving up. It respects fixed sizes and calculates content-based
 // sizes otherwise. availableSize provides the width constraint for wrapping.
 func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Vec2) Vec2 {
-
 	// Use component's fixed size if provided
 	fixedSize := comp.Size() // Assuming Size() returns the pre-set size
 	hasFixedWidth := fixedSize.X > 0
@@ -70,12 +75,18 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 		// If container has fixed dimensions, use them as constraints for children
 		childAvailableSize := availableSize
 		if hasFixedWidth {
-			childAvailableSize.X = fixedSize.X - comp.Padding().X - comp.Border().X
+			childAvailableSize.X = fixedSize.X - 2*(comp.Padding().X+comp.Border().X)
+		} else {
+			childAvailableSize.X = availableSize.X - 2*(comp.Padding().X+comp.Border().X)
+			childAvailableSize.X = max(0, childAvailableSize.X)
 		}
 		if hasFixedHeight {
 			// Height constraint isn't typically used for width calculation
 			// but could be relevant for scrollable content later.
-			childAvailableSize.Y = fixedSize.Y - comp.Padding().Y - comp.Border().Y
+			childAvailableSize.Y = fixedSize.Y - 2*(comp.Padding().Y+comp.Border().Y)
+		} else {
+			childAvailableSize.Y = availableSize.Y - 2*(comp.Padding().Y+comp.Border().Y)
+			childAvailableSize.Y = max(0, childAvailableSize.Y)
 		}
 
 		// Calculate children sizes first
@@ -93,9 +104,12 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 			currentLineWidth := float32(0.0)
 			currentLineMaxHeight := float32(0.0)
 			maxLineWidth := float32(0.0)
+			numberOfChildrenInLine := 0
 
 			for i, child := range c.Children() {
 				childSize := childrenSizes[i]
+				childSize.X += 2 * child.Margin().X // Include margin in size for wrapping calculations
+				childSize.Y += 2 * child.Margin().Y // Include margin in size for wrapping calculations
 				if child.Pos().Type == PositionTypeAbsolute {
 					// Skip absolutely positioned children for wrapping calculations for now (will handle at the end)
 					continue
@@ -106,19 +120,23 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 				// Also wrap if the child itself forces a block display.
 				needsWrap := (currentLineWidth > 0 && currentLineWidth+childSize.X > childAvailableSize.X) ||
 					child.Display() == DisplayBlock
-
+				numberOfChildrenInLine++
 				if needsWrap {
 					// Finish previous line
-					contentHeight += currentLineMaxHeight
+					contentHeight += currentLineMaxHeight + comp.Gap().Y // Add gap between lines
 					maxLineWidth = max(maxLineWidth, currentLineWidth)
+					numberOfChildrenInLine = 1 // Reset for the new line
 
 					// Start new line
-					currentLineWidth = childSize.X + 2*c.Margin().X
-					currentLineMaxHeight = childSize.Y + 2*child.Margin().Y
+					currentLineWidth = childSize.X
+					currentLineMaxHeight = childSize.Y
 				} else {
 					// Add to current line
-					currentLineWidth += childSize.X + 2*c.Margin().X
-					currentLineMaxHeight = max(currentLineMaxHeight, childSize.Y+2*child.Margin().Y)
+					if numberOfChildrenInLine > 1 {
+						currentLineWidth += comp.Gap().X // Add gap between children
+					}
+					currentLineWidth += childSize.X
+					currentLineMaxHeight = max(currentLineMaxHeight, childSize.Y)
 				}
 
 				// If a single child is wider than available, it dictates the max width
@@ -147,6 +165,8 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 			// Use calculated dimensions unless overridden by fixed dimensions
 			calculatedSize.X = maxLineWidth
 			calculatedSize.Y = contentHeight
+
+			// TODO: handle case where only of the dimensions is fixed (properly)
 			if hasFixedWidth {
 				calculatedSize.X = fixedSize.X
 			}
@@ -231,6 +251,7 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 		currentLineXOffset := float32(0.0) + comp.Padding().X + comp.Border().X
 		currentLineYOffset := float32(0.0) + comp.Padding().Y + comp.Border().Y
 		currentLineMaxHeight := float32(0.0)
+		numberOfChildrenInLine := 0
 
 		// Iterate through children to position them.
 		for _, child := range c.Children() {
@@ -263,10 +284,17 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 			}
 
 			// If wrapping is needed, move to the start of the next line.
+
 			if needsWrap {
-				currentLineYOffset += currentLineMaxHeight              // Add height of the completed line.
+				numberOfChildrenInLine = 1                              // Reset for the new line
+				currentLineYOffset += currentLineMaxHeight + c.Gap().Y  // Add height of the completed line.
 				currentLineXOffset = comp.Padding().X + comp.Border().X // Reset X offset for the new line.
 				currentLineMaxHeight = 0                                // Reset max height for the new line.
+			} else {
+				numberOfChildrenInLine++ // Increment the number of children in the current line.
+			}
+			if numberOfChildrenInLine > 1 {
+				currentLineXOffset += c.Gap().X // Add gap between children
 			}
 
 			// Calculate the child's position *relative* to this container's content origin.

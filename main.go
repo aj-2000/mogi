@@ -15,12 +15,9 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+	"sync"
 	"unsafe"
 )
-
-func init() {
-	runtime.LockOSThread()
-}
 
 type App struct {
 	fonts         map[string]*C.FontData
@@ -98,8 +95,15 @@ func (app *App) Run(f func(app *App) common.IComponent) {
 	if app.renderer == nil {
 		log.Fatalln("Renderer is not initialized")
 	}
+	// Define these outside the closure to persist state across frames
+	layoutEngine := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
+		font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
+		return app.CalculateTextWidth(font, s)
+	})
 
 	for C.window_should_close(app.renderer) == 0 {
+		windowSize := app.GetWindowSize()
+
 		current_time := float32(C.get_current_time(app.renderer))
 		deltaTime := current_time - app.lastFrameTime
 		app.lastFrameTime = current_time
@@ -110,6 +114,8 @@ func (app *App) Run(f func(app *App) common.IComponent) {
 		app.totalFrames++
 		root := f(app)
 		componentRenderer := &ComponentRenderer{Component: root}
+
+		layoutEngine.Layout(root, common.Vec2{}, windowSize)
 
 		C.clear_screen(app.renderer, C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0})
 		componentRenderer.Render(app)
@@ -181,6 +187,7 @@ func (app *App) GetWindowSize() common.Vec2 {
 }
 
 func NewApp(title string, width int, height int) *App {
+	runtime.LockOSThread()
 	renderer := C.create_renderer(C.int(width), C.int(height), C.CString(title))
 	if renderer == nil {
 		log.Fatalln("Failed to create renderer")
@@ -348,6 +355,7 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 }
 
 func main() {
+
 	// --- pprof setup ---
 	fCPU, err := os.Create("cpu.pprof")
 	if err != nil {
@@ -371,42 +379,42 @@ func main() {
 		fMem.Close()
 	}()
 
-	app := NewApp("mogi", 800, 800)
-	if app == nil {
-		log.Fatalln("Failed to create app")
-	}
-	// TODO: is it needed?
-	defer app.Destroy()
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
 
-	app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
+	go func() {
+		defer wg.Done()
 
-	// TODO: should we need to expose app?
-	// Define these outside the closure to persist state across frames
-	layoutEngine := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
-		font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
-		return app.CalculateTextWidth(font, s)
-	})
+		app := NewApp("mogi", 800, 800)
+		if app == nil {
+			log.Fatalln("Failed to create app")
+		}
+		// TODO: is it needed?
+		defer app.Destroy()
 
-	app.Run(func(app *App) common.IComponent {
-		windowSize := app.GetWindowSize()
+		app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 
-		r := common.NewContainer().
-			SetID("main_container").
-			SetBackgroundColor(consts.ColorCyan()).
-			AddChildren( // Add all children at once
-				// examples.ChessboardComponent(),
-				// examples.BuyNowCardComponent(),
-				// examples.BoxesOneComponent(),
+		app.Run(func(app *App) common.IComponent {
+			return common.NewContainer().
+				SetID("main_container(cyan)").
+				SetBackgroundColor(consts.ColorCyan()).
+				AddChildren( // Add all children at once
+					// examples.ChessboardComponent(),
+					// examples.BuyNowCardComponent(),
+					examples.BoxesOneComponent(),
 				// examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
 				// examples.NestedContainersComponent(),
 				// examples.ClayDemoComponent(windowSize),
-				examples.ExampleMarginPaddingBorder(),
-				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20}, app.GetFPS()),
-			).
-			SetSize(windowSize)
-		// log.Printf("Window size: %v\n", windowSize)
-
-		layoutEngine.Layout(r, common.Vec2{}, common.Vec2{X: windowSize.X, Y: windowSize.Y})
-		return r // Return the root component for rendering
-	})
+				// examples.ExampleMarginPaddingBorder(),
+				// examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20},  app.GetWindowSize()),
+				).
+				SetMargin(common.Vec2{X: 10, Y: 10}).
+				SetPadding(common.Vec2{X: 10, Y: 10}).
+				SetBorder(common.Vec2{X: 5, Y: 5}).
+				SetBorderRadius(10).
+				SetBorderColor(consts.ColorGreen()).
+				SetGap(common.Vec2{X: 5, Y: 5})
+		})
+	}()
+	wg.Wait()
 }

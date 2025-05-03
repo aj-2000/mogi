@@ -45,6 +45,7 @@ TODO: (Optionally, but recommended) Update the C Renderer struct to cache curren
 16. cache absolute position?
 17. modern opengl
 18. border,padding,border - t,b,r,l
+19. renderer interface
 // TODO: Benchmarking
 // TODO: SIMD implementations
 // TODO: bezier curves

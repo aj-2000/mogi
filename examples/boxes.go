@@ -17,7 +17,7 @@ func randomColor() common.ColorRGBA {
 }
 
 func BoxesOneComponent() common.IComponent {
-	const numBoxes = 5000
+	const numBoxes = 200
 
 	children := make([]common.IComponent, numBoxes)
 	for i := range children {
@@ -35,8 +35,8 @@ func BoxesOneComponent() common.IComponent {
 	}
 
 	return common.NewContainer().
-		SetID("boxes_container").
-		SetBackgroundColor(consts.ColorBlack()).
+		SetID("boxes_container(red)").
+		SetBackgroundColor(consts.ColorRed()).
 		AddChildren(children...)
 }
 
