@@ -395,25 +395,23 @@ func main() {
 		app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 
 		app.Run(func(app *App) common.IComponent {
+			bgColor := consts.ColorYellow()
 			return common.NewContainer().
-				SetID("main_container(cyan)").
-				SetBackgroundColor(consts.ColorCyan()).
+				SetID("app_container").
+				SetBackgroundColor(bgColor).
 				AddChildren( // Add all children at once
 					// examples.ChessboardComponent(),
 					// examples.BuyNowCardComponent(),
-					examples.BoxesOneComponent(),
-				// examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
+					// examples.BoxesOneComponent(),
+					examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
 				// examples.NestedContainersComponent(),
 				// examples.ClayDemoComponent(windowSize),
 				// examples.ExampleMarginPaddingBorder(),
 				// examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20},  app.GetWindowSize()),
 				).
-				SetMargin(common.Vec2{X: 10, Y: 10}).
-				SetPadding(common.Vec2{X: 10, Y: 10}).
-				SetBorder(common.Vec2{X: 5, Y: 5}).
-				SetBorderRadius(10).
-				SetBorderColor(consts.ColorGreen()).
-				SetGap(common.Vec2{X: 5, Y: 5})
+				// SetMargin(common.Vec2{X: 3, Y: 3}).
+				SetPadding(common.Vec2{X: 4, Y: 4}).
+				SetGap(common.Vec2{X: 3, Y: 3})
 		})
 	}()
 	wg.Wait()

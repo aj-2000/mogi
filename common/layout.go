@@ -61,168 +61,183 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 
 // calculateSizeRecursive determines the size of each component, starting from
 // the leaves and moving up. It respects fixed sizes and calculates content-based
-// sizes otherwise. availableSize provides the width constraint for wrapping.
+// sizes otherwise. availableSize provides the constraints from the parent.
 func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Vec2) Vec2 {
-	// Use component's fixed size if provided
-	fixedSize := comp.Size() // Assuming Size() returns the pre-set size
+	fixedSize := comp.Size() // User-defined fixed size
 	hasFixedWidth := fixedSize.X > 0
 	hasFixedHeight := fixedSize.Y > 0
 
-	var calculatedSize Vec2
+	padding := comp.Padding()
+	border := comp.Border()
+	paddingAndBorderX := padding.X + border.X
+	paddingAndBorderY := padding.Y + border.Y
+
+	var calculatedContentSize Vec2 // Size needed by content only
 
 	switch c := comp.(type) {
 	case *Container:
-		// If container has fixed dimensions, use them as constraints for children
+		// If container has fixed dimensions, children layout doesn't affect its size.
+		// However, we still need to calculate children sizes recursively.
+		// Calculate the space available *inside* this container for children.
 		childAvailableSize := availableSize
+		childAvailableSize.X -= 2 * paddingAndBorderX
+		childAvailableSize.Y -= 2 * paddingAndBorderY
+
+		// If container has fixed size, use that to constrain children instead.
 		if hasFixedWidth {
-			childAvailableSize.X = fixedSize.X - 2*(comp.Padding().X+comp.Border().X)
-		} else {
-			childAvailableSize.X = availableSize.X - 2*(comp.Padding().X+comp.Border().X)
-			childAvailableSize.X = max(0, childAvailableSize.X)
+			childAvailableSize.X = fixedSize.X - 2*paddingAndBorderX
 		}
 		if hasFixedHeight {
-			// Height constraint isn't typically used for width calculation
-			// but could be relevant for scrollable content later.
-			childAvailableSize.Y = fixedSize.Y - 2*(comp.Padding().Y+comp.Border().Y)
-		} else {
-			childAvailableSize.Y = availableSize.Y - 2*(comp.Padding().Y+comp.Border().Y)
-			childAvailableSize.Y = max(0, childAvailableSize.Y)
+			childAvailableSize.Y = fixedSize.Y - 2*paddingAndBorderY
 		}
+		// Ensure available size for children isn't negative.
+		childAvailableSize.X = max(0, childAvailableSize.X)
+		childAvailableSize.Y = max(0, childAvailableSize.Y)
 
-		// Calculate children sizes first
+		// Calculate children sizes first, passing the constrained available size.
 		var childrenSizes []Vec2
 		for _, child := range c.Children() {
 			childrenSizes = append(childrenSizes, le.calculateSizeRecursive(child, childAvailableSize))
 		}
 
-		// If size is fixed, we don't need to calculate based on children
+		// If size is fully fixed, we don't need to calculate based on children layout.
+		// The recursive calls above were still needed for the children themselves.
 		if hasFixedWidth && hasFixedHeight {
-			calculatedSize = fixedSize
+			// Use fixed size directly (padding/border are included implicitly)
+			calculatedContentSize = Vec2{
+				X: max(0, fixedSize.X-2*paddingAndBorderX),
+				Y: max(0, fixedSize.Y-2*paddingAndBorderY),
+			}
+			// Skip layout calculation below
 		} else {
-			// Calculate container size based on children layout (wrapping)
+			// Calculate container's content size based on children layout (wrapping).
 			contentHeight := float32(0.0)
 			currentLineWidth := float32(0.0)
 			currentLineMaxHeight := float32(0.0)
-			maxLineWidth := float32(0.0)
+			maxContentWidth := float32(0.0) // Tracks the widest line of content
 			numberOfChildrenInLine := 0
 
 			for i, child := range c.Children() {
+				// Use the size calculated in the recursive call
 				childSize := childrenSizes[i]
-				childSize.X += 2 * child.Margin().X // Include margin in size for wrapping calculations
-				childSize.Y += 2 * child.Margin().Y // Include margin in size for wrapping calculations
+				childMargin := child.Margin()
+
+				// Size used for layout includes the child's margins
+				childLayoutWidth := childSize.X + 2*childMargin.X
+				childLayoutHeight := childSize.Y + 2*childMargin.Y
+
 				if child.Pos().Type == PositionTypeAbsolute {
-					// Skip absolutely positioned children for wrapping calculations for now (will handle at the end)
+					// Absolutely positioned children don't participate in flow layout.
 					continue
 				}
 
 				// Determine if wrapping is needed. Use childAvailableSize.X as the limit.
-				// Wrap if not the first element on the line and adding it exceeds available width.
-				// Also wrap if the child itself forces a block display.
-				needsWrap := (currentLineWidth > 0 && currentLineWidth+childSize.X > childAvailableSize.X) ||
-					child.Display() == DisplayBlock
-				numberOfChildrenInLine++
-				if needsWrap {
-					// Finish previous line
-					contentHeight += currentLineMaxHeight + comp.Gap().Y // Add gap between lines
-					maxLineWidth = max(maxLineWidth, currentLineWidth)
-					numberOfChildrenInLine = 1 // Reset for the new line
+				gapX := float32(0.0)
+				if numberOfChildrenInLine > 0 {
+					gapX = c.Gap().X // Gap only applies after the first item
+				}
 
-					// Start new line
-					currentLineWidth = childSize.X
-					currentLineMaxHeight = childSize.Y
+				needsWrap := (numberOfChildrenInLine > 0 && currentLineWidth+gapX+childLayoutWidth > childAvailableSize.X) ||
+					child.Display() == DisplayBlock
+
+				if needsWrap && numberOfChildrenInLine > 0 { // Ensure wrap only happens if line isn't empty
+					// Finish previous line
+					contentHeight += currentLineMaxHeight
+					if numberOfChildrenInLine > 1 { // Only add line gap if there was more than one item
+						contentHeight += c.Gap().Y
+					}
+					maxContentWidth = max(maxContentWidth, currentLineWidth)
+
+					// Start new line with the current child
+					currentLineWidth = childLayoutWidth
+					currentLineMaxHeight = childLayoutHeight
+					numberOfChildrenInLine = 1
 				} else {
 					// Add to current line
-					if numberOfChildrenInLine > 1 {
-						currentLineWidth += comp.Gap().X // Add gap between children
+					if numberOfChildrenInLine > 0 {
+						currentLineWidth += c.Gap().X // Add gap before adding the child
 					}
-					currentLineWidth += childSize.X
-					currentLineMaxHeight = max(currentLineMaxHeight, childSize.Y)
+					currentLineWidth += childLayoutWidth
+					currentLineMaxHeight = max(currentLineMaxHeight, childLayoutHeight)
+					numberOfChildrenInLine++
 				}
 
-				// If a single child is wider than available, it dictates the max width
-				maxLineWidth = max(maxLineWidth, childSize.X)
+				// If a single child is wider than available, it dictates the minimum content width needed.
+				// This ensures maxContentWidth captures overflowing individual children.
+				maxContentWidth = max(maxContentWidth, childLayoutWidth)
 			}
-
-			// After processing all relative children, finalize the last line's height
-			// check for absolutely positioned children that might affect the height and width
-			for i, child := range c.Children() {
-				if child.Pos().Type == PositionTypeAbsolute {
-					childSize := childrenSizes[i]
-					contentHeight = max(contentHeight, childSize.Y)
-					maxLineWidth = max(maxLineWidth, childSize.X)
-				}
-			}
-
-			// Add the height of the last line to the total content height
-			// This is necessary to ensure the container's height accounts for all children.
-			// If the last line was not empty, add its height to the total content height.
 
 			// Add the height of the last line
-			contentHeight += currentLineMaxHeight
-			// Ensure the max width accounts for the last line's width
-			maxLineWidth = max(maxLineWidth, currentLineWidth)
-
-			// Use calculated dimensions unless overridden by fixed dimensions
-			calculatedSize.X = maxLineWidth
-			calculatedSize.Y = contentHeight
-
-			// TODO: handle case where only of the dimensions is fixed (properly)
-			if hasFixedWidth {
-				calculatedSize.X = fixedSize.X
+			if numberOfChildrenInLine > 0 {
+				contentHeight += currentLineMaxHeight
+				maxContentWidth = max(maxContentWidth, currentLineWidth)
 			}
-			if hasFixedHeight {
-				calculatedSize.Y = fixedSize.Y
-			}
+
+			// Store the calculated size needed *just for the content*.
+			calculatedContentSize.X = maxContentWidth
+			calculatedContentSize.Y = contentHeight
 		}
 
 	case *Text:
 		// TODO: Font size should ideally come from component style/props
 		fontSize := float32(24.0)
 		// TODO: Padding should ideally come from component style/props
-		padding := float32(30.0)
-		width := le.CalculateTextWidth(c.Content, fontSize) + padding
-		height := fontSize // Basic height based on font size
-		calculatedSize = Vec2{X: width, Y: height}
-		// Respect fixed size if set
-		if hasFixedWidth {
-			calculatedSize.X = fixedSize.X
-		}
-		if hasFixedHeight {
-			calculatedSize.Y = fixedSize.Y
-		}
+		// Note: Text usually uses its own padding, not the component's general padding.
+		// Assuming CalculateTextWidth gives raw text width. Add specific text padding if needed.
+		textPadding := float32(0.0) // Example: Add text-specific padding if necessary
+		width := le.CalculateTextWidth(c.Content, fontSize) + 2*textPadding
+		height := fontSize + 2*textPadding // Basic height based on font size
+		calculatedContentSize = Vec2{X: width, Y: height}
 
 	case *Button:
-		textWidth := le.CalculateTextWidth(c.Label, c.FontSize()) + 30.0
-		width := textWidth
-		height := c.FontSize()
-		calculatedSize = Vec2{X: width, Y: height}
-		// Respect fixed size if set
-		if hasFixedWidth {
-			calculatedSize.X = fixedSize.X
-		}
-		if hasFixedHeight {
-			calculatedSize.Y = fixedSize.Y
-		}
+		// Assume button includes internal padding within its calculation logic
+		// For example, CalculateTextWidth might already include some padding.
+		// Or, add explicit button padding here.
+		buttonPaddingX := float32(15.0) // Example internal padding
+		buttonPaddingY := float32(5.0)  // Example internal padding
+		textWidth := le.CalculateTextWidth(c.Label, c.FontSize())
+		width := textWidth + 2*buttonPaddingX
+		height := c.FontSize() + 2*buttonPaddingY
+		calculatedContentSize = Vec2{X: width, Y: height}
 
 	case *Image:
-		calculatedSize = c.Size()
+		// Assume c.Size() returns the intrinsic size of the image content.
+		intrinsicSize := c.Size()
+		calculatedContentSize = intrinsicSize
+
 	default:
-		// Consider logging a warning instead of panicking for unknown types?
-		panic(fmt.Sprintf("Unsupported component type for size calculation: %T", comp))
-		// Or return a zero size:
-		// calculatedSize = Vec2{X: 0, Y: 0}
+		// Return zero size for unknown types, maybe log a warning.
+		fmt.Printf("Warning: Unsupported component type for size calculation: %T\n", comp)
+		calculatedContentSize = Vec2{X: 0, Y: 0}
+		// Or panic:
+		// panic(fmt.Sprintf("Unsupported component type for size calculation: %T", comp))
 	}
 
-	if !hasFixedWidth {
-		calculatedSize.X += 2 * (comp.Padding().X + comp.Border().X) // Include padding and border in width
+	// Calculate the total "natural" size including padding and border.
+	naturalWidth := calculatedContentSize.X + 2*paddingAndBorderX
+	naturalHeight := calculatedContentSize.Y + 2*paddingAndBorderY
+
+	// Final size respects fixed dimensions if they are set.
+	finalSize := Vec2{
+		X: naturalWidth,
+		Y: naturalHeight,
 	}
-	if !hasFixedHeight {
-		calculatedSize.Y += 2 * (comp.Padding().Y + comp.Border().Y) // Include padding and border in height
+	if hasFixedWidth {
+		finalSize.X = fixedSize.X
+	}
+	if hasFixedHeight {
+		finalSize.Y = fixedSize.Y
 	}
 
-	comp.setSize(calculatedSize) // Set the calculated size on the component
-	// Use the internal setter
-	return calculatedSize
+	// Ensure final size is not negative (e.g., if fixed size is smaller than padding/border).
+	finalSize.X = max(0, finalSize.X)
+	finalSize.Y = max(0, finalSize.Y)
+
+	// Set the calculated size on the component.
+	comp.setSize(finalSize)
+
+	// Return the final calculated size for the parent's layout logic.
+	return finalSize
 }
 
 // calculatePositionRecursive determines the position of each component relative

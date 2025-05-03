@@ -46,6 +46,7 @@ TODO: (Optionally, but recommended) Update the C Renderer struct to cache curren
 17. modern opengl
 18. border,padding,border - t,b,r,l
 19. renderer interface
+20. respect root container margin
 // TODO: Benchmarking
 // TODO: SIMD implementations
 // TODO: bezier curves

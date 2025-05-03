@@ -2,12 +2,20 @@ package common
 
 import (
 	"log"
+	"strconv"
 )
 
 // Added for default callback
 
 type ColorRGBA struct {
 	R, G, B, A float32
+}
+
+func (c ColorRGBA) String() string {
+	return "rgba(" + strconv.FormatFloat(float64(c.R), 'f', 2, 32) + ", " +
+		strconv.FormatFloat(float64(c.G), 'f', 2, 32) + ", " +
+		strconv.FormatFloat(float64(c.B), 'f', 2, 32) + ", " +
+		strconv.FormatFloat(float64(c.A), 'f', 2, 32) + ")"
 }
 
 type PositionType int

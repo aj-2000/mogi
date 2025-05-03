@@ -46,7 +46,13 @@ func recursiveHelper(currentLevel, maxLevel int, baseID string, maxChildrenPerNo
 
 	container := common.NewContainer().
 		SetID(id).
-		SetBackgroundColor(color)
+		SetBackgroundColor(color).
+		// SetMargin(common.Vec2{X: 2, Y: 2}).
+		SetPadding(common.Vec2{X: 3, Y: 3}).
+		SetBorder(common.Vec2{X: 2, Y: 2}).
+		SetBorderColor(randomColor()).
+		SetBorderRadius(2).
+		SetGap(common.Vec2{X: 2, Y: 2})
 
 	if currentLevel >= maxLevel {
 		width := float32(rand.Intn(11)) + 4.05
