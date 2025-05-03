@@ -12,7 +12,9 @@ import (
 	"GoUI/examples"
 	"fmt"
 	"log"
+	"os"
 	"runtime"
+	"runtime/pprof"
 	"unsafe"
 )
 
@@ -21,11 +23,14 @@ func init() {
 }
 
 type App struct {
-	fonts       map[string]*C.FontData
-	textures    map[string]C.GLuint
-	renderer    unsafe.Pointer
-	totalTime   float64
-	totalFrames int64
+	fonts         map[string]*C.FontData
+	textures      map[string]C.GLuint
+	renderer      unsafe.Pointer
+	totalTime     float64
+	totalFrames   int64
+	deltaTime     float32
+	lastFrameTime float32
+	fps           float32
 }
 
 func (app *App) LoadFont(path string, size float32) (*C.FontData, error) {
@@ -95,8 +100,13 @@ func (app *App) Run(f func(app *App) common.IComponent) {
 	}
 
 	for C.window_should_close(app.renderer) == 0 {
-		deltaTime := app.GetDeltaTime()
-		app.totalTime += float64(deltaTime)
+		current_time := float32(C.get_current_time(app.renderer))
+		deltaTime := current_time - app.lastFrameTime
+		app.lastFrameTime = current_time
+		app.deltaTime = deltaTime
+		app.fps = 1.0 / deltaTime
+
+		app.totalTime += float64(app.deltaTime)
 		app.totalFrames++
 		root := f(app)
 		componentRenderer := &ComponentRenderer{Component: root}
@@ -106,11 +116,6 @@ func (app *App) Run(f func(app *App) common.IComponent) {
 		C.present_screen(app.renderer)
 		C.handle_events(app.renderer)
 	}
-}
-
-func (app *App) GetDeltaTime() float32 {
-	deltaTime := C.get_delta_time(app.renderer)
-	return float32(deltaTime)
 }
 
 func (app *App) CalculateTextWidth(font *C.FontData, text string) float32 {
@@ -123,7 +128,7 @@ func (app *App) CalculateTextWidth(font *C.FontData, text string) float32 {
 
 // TODO: it's not correct for some reason
 func (app *App) GetFPS() float32 {
-	deltaTime := app.GetDeltaTime()
+	deltaTime := app.deltaTime
 	if deltaTime == 0 {
 		return 0
 	}
@@ -186,7 +191,7 @@ func NewApp(title string, width int, height int) *App {
 		textures: make(map[string]C.GLuint),
 		renderer: renderer,
 	}
-	app.SetVSync(true)
+	app.SetVSync(false)
 	return app
 }
 
@@ -343,6 +348,29 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 }
 
 func main() {
+	// --- pprof setup ---
+	fCPU, err := os.Create("cpu.pprof")
+	if err != nil {
+		log.Fatalf("could not create CPU profile: %v", err)
+	}
+	defer fCPU.Close()
+	if err := pprof.StartCPUProfile(fCPU); err != nil {
+		log.Fatalf("could not start CPU profile: %v", err)
+	}
+	defer pprof.StopCPUProfile()
+
+	fMem, err := os.Create("mem.pprof")
+	if err != nil {
+		log.Fatalf("could not create memory profile: %v", err)
+	}
+	defer func() {
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(fMem); err != nil {
+			log.Fatalf("could not write memory profile: %v", err)
+		}
+		fMem.Close()
+	}()
+
 	app := NewApp("GoUI", 800, 800)
 	if app == nil {
 		log.Fatalln("Failed to create app")
@@ -366,14 +394,14 @@ func main() {
 			SetID("main_container").
 			SetBackgroundColor(consts.ColorCyan()).
 			AddChildren( // Add all children at once
-				// examples.ChessboardComponent(),
-				// examples.BuyNowCardComponent(),
-				// examples.BoxesOneComponent(),
-				// examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
-				// examples.NestedContainersComponent(),
-				// examples.ClayDemoComponent(windowSize),
+				examples.ChessboardComponent(),
+				examples.BuyNowCardComponent(),
+				examples.BoxesOneComponent(),
+				examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
+				examples.NestedContainersComponent(),
+				examples.ClayDemoComponent(windowSize),
 				examples.ExampleMarginPaddingBorder(),
-				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 225, Y: 20}, app.GetAvgFPS()),
+				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 225, Y: 20}, app.GetFPS()),
 			).
 			SetSize(windowSize)
 		// log.Printf("Window size: %v\n", windowSize)

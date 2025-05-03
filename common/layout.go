@@ -36,7 +36,7 @@ func (le *LayoutEngine) Layout(root IComponent, origin Vec2, availableSize Vec2)
 	le.calculatePositionRecursive(root, origin)
 
 	// Optional: Print the final tree for debugging
-	le.printComponentTree(root, " ")
+	// le.printComponentTree(root, "	")
 }
 
 // printComponentTree is a helper for debugging the layout structure.

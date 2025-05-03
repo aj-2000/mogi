@@ -180,21 +180,6 @@ void handle_events(void* renderer_ptr) {
     glfwPollEvents();
 }
 
-float get_delta_time(void* renderer_ptr) {
-    // No need for renderer context here, glfwGetTime is global
-    (void)renderer_ptr; // Mark as unused
-    static double last_time = 0.0;
-    double current_time = glfwGetTime();
-    // Prevent huge delta time on first frame
-    if (last_time == 0.0) {
-        last_time = current_time;
-        return 0.0f;
-    }
-    float delta_time = (float)(current_time - last_time);
-    last_time = current_time;
-    return delta_time;
-}
-
 void set_vsync(void* renderer_ptr, int vsync) {
     // No need for renderer context here, glfwSwapInterval affects current context
      (void)renderer_ptr; // Mark as unused
@@ -909,7 +894,10 @@ void draw_texture(void* renderer_ptr, GLuint texture_id, Rect rect, ColorRGBA co
     glDisable(GL_TEXTURE_2D);
 }
 
-
-
+float get_current_time(void* renderer_ptr) {
+    Renderer* ctx = (Renderer*)renderer_ptr;
+    if (!ctx || !ctx->window) return 0.0f;
+    return (float)glfwGetTime(); // If using GLFW for timing
+}
 
 

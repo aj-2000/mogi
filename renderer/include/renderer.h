@@ -105,6 +105,9 @@ typedef struct Renderer {
     // Cached window size (updated by resize callback) for potential performance
     int current_width;          ///< Current framebuffer width in pixels.
     int current_height;         ///< Current framebuffer height in pixels.
+    float fps;             ///< Current frames per second (FPS).
+    float delta_time;     ///< Time elapsed since the last frame in seconds.
+    float last_frame_time; ///< Timestamp of the last frame in seconds.
 } Renderer;
 
 
@@ -322,12 +325,13 @@ void draw_texture(void* renderer_ptr, GLuint texture_id, Rect rect, ColorRGBA co
 // Utilities / Getters
 // =============================================================================
 
+
 /**
- * @brief Gets the time elapsed since the last frame, in seconds.
+ * @brief Gets the current time in seconds since GLFW was initialized.
  * @param renderer_ptr Renderer context.
- * @return Delta time in seconds (float).
+ * @return The current time in seconds as a floating-point value.
  */
-float get_delta_time(void* renderer_ptr);
+float get_current_time(void* renderer_ptr);
 
 /**
  * @brief Gets the current size of the window's framebuffer.
