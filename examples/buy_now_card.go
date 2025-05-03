@@ -3,8 +3,8 @@ package examples
 import (
 	"log"
 
-	"GoUI/common"
-	"GoUI/consts"
+	"mogi/common"
+	"mogi/consts"
 )
 
 func BuyNowCardComponent() common.IComponent {

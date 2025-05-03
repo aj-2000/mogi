@@ -1,6 +1,6 @@
 package consts
 
-import "GoUI/common"
+import "mogi/common"
 
 // These cannot be true Go constants because common.ColorRGBA is a struct.
 // Instead, use unexported variables and provide exported getter functions for immutability.

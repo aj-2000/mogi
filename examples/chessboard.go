@@ -1,8 +1,8 @@
 package examples
 
 import (
-	"GoUI/common"
-	"GoUI/consts"
+	"mogi/common"
+	"mogi/consts"
 	"strconv"
 )
 

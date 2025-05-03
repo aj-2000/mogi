@@ -7,11 +7,11 @@ package main
 */
 import "C"
 import (
-	"GoUI/common"
-	"GoUI/consts"
-	"GoUI/examples"
 	"fmt"
 	"log"
+	"mogi/common"
+	"mogi/consts"
+	"mogi/examples"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -371,7 +371,7 @@ func main() {
 		fMem.Close()
 	}()
 
-	app := NewApp("GoUI", 800, 800)
+	app := NewApp("mogi", 800, 800)
 	if app == nil {
 		log.Fatalln("Failed to create app")
 	}
@@ -394,14 +394,14 @@ func main() {
 			SetID("main_container").
 			SetBackgroundColor(consts.ColorCyan()).
 			AddChildren( // Add all children at once
-				examples.ChessboardComponent(),
-				examples.BuyNowCardComponent(),
-				examples.BoxesOneComponent(),
-				examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
-				examples.NestedContainersComponent(),
-				examples.ClayDemoComponent(windowSize),
+				// examples.ChessboardComponent(),
+				// examples.BuyNowCardComponent(),
+				// examples.BoxesOneComponent(),
+				// examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
+				// examples.NestedContainersComponent(),
+				// examples.ClayDemoComponent(windowSize),
 				examples.ExampleMarginPaddingBorder(),
-				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 225, Y: 20}, app.GetFPS()),
+				examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20}, app.GetFPS()),
 			).
 			SetSize(windowSize)
 		// log.Printf("Window size: %v\n", windowSize)

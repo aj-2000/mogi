@@ -1,9 +1,9 @@
 package examples
 
 import (
-	"GoUI/common"
-	"GoUI/consts"
 	"math/rand"
+	"mogi/common"
+	"mogi/consts"
 	"strconv"
 )
 

@@ -13,7 +13,7 @@
 #define RENDERER_DIR "./renderer"
 #define RENDERER_LIB_A "/librenderer.a"
 #define RENDERER_LIB_H "/librenderer.h"
-#define OUTPUT_EXE BIN_DIR "/goui.exe"
+#define OUTPUT_EXE BIN_DIR "/mogi.exe"
 #define INCLUDE_DIR "./renderer/include"
 #define LIB_DIR "./renderer/lib/Release"
 

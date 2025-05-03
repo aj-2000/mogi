@@ -1,9 +1,9 @@
 package examples
 
 import (
-	"GoUI/common"
-	"GoUI/consts"
 	"fmt"
+	"mogi/common"
+	"mogi/consts"
 )
 
 func FPSCounterComponent(pos common.Vec2, avgFps float32) common.IComponent {
@@ -17,6 +17,10 @@ func FPSCounterComponent(pos common.Vec2, avgFps float32) common.IComponent {
 	return common.NewContainer().
 		SetID("fps_counter").
 		SetBackgroundColor(consts.ColorGreen()).
+		SetSize(common.Vec2{
+			X: 180,
+			Y: 35,
+		}).
 		AddChild(fpsText).
 		SetPosition(common.Position{X: pos.X, Y: pos.Y, Type: common.PositionTypeAbsolute})
 }
