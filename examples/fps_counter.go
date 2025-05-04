@@ -2,24 +2,27 @@ package examples
 
 import (
 	"fmt"
-	"mogi/common"
-	"mogi/consts"
+	mogiApp "mogi/app"
+	"mogi/color"
+	"mogi/math"
+	"mogi/ui"
 )
 
-func FPSCounterComponent(pos common.Vec2, getFps func() float32) common.IComponent {
-	fps := fmt.Sprintf("FPS: %.0f", getFps())
-	fpsText := common.NewText(fps).
-		SetID("").
+func FPSCounterComponent(app *mogiApp.App) ui.IComponent {
+	fps := fmt.Sprintf("FPS: %.0f", app.GetFPS())
+	windowSize := app.GetWindowSize()
+	fpsText := app.Text(fps).
+		SetID("fps_text").
 		SetFontSize(24).
-		SetColor(consts.ColorRed())
+		SetColor(color.Red)
 
-	return common.NewContainer().
+	// TODO: get self size and position
+	// TODO: radius vs border radius
+	return app.Container().
 		SetID("fps_counter").
-		SetBackgroundColor(consts.ColorGreen()).
-		SetSize(common.Vec2{
-			X: 180,
-			Y: 35,
-		}).
+		SetBackgroundColor(color.Green).
+		SetPadding(math.Vec2f32{X: 5, Y: 5}).
+		SetBorderRadius(5).
 		AddChild(fpsText).
-		SetPosition(common.Position{X: pos.X, Y: pos.Y, Type: common.PositionTypeAbsolute})
+		SetPosition(ui.Position{X: windowSize.X - 96.4, Y: 20, Type: ui.PositionTypeAbsolute})
 }

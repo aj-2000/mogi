@@ -1,58 +1,57 @@
 package examples
 
 import (
-	"mogi/common"
-	"mogi/consts"
+	mogiApp "mogi/app"
+	"mogi/color"
+	"mogi/math"
+	"mogi/ui"
 	"strconv"
 )
 
 // ChessboardComponent creates an 8x8 chessboard using manually positioned squares.
-func ChessboardComponent() common.IComponent {
+func ChessboardComponent(app *mogiApp.App) ui.IComponent {
 	boardSize := float32(800.0)
 	squareSize := boardSize / 8.0
-	children := make([]common.IComponent, 64) // Pre-allocate slice capacity
+	children := make([]ui.IComponent, 64) // Pre-allocate slice capacity
 
 	for i := range children {
 		x := i % 8
 		y := i / 8
 		isWhite := (x+y)%2 == 0
 
-		bgColor := consts.ColorBlack
+		bgColor := color.Black
 		if isWhite {
-			bgColor = consts.ColorWhite
+			bgColor = color.White
 		}
 
 		if i == 2 {
-			bgColor = consts.ColorRed // Highlight the square at index 2 (for example)
+			bgColor = color.Red
 		}
 
 		if i == 8 {
-			bgColor = consts.ColorOrange // Highlight the square at index 2 (for example)
+			bgColor = color.Orange
 		}
 
 		if i == 63 {
-			bgColor = consts.ColorGreen // Highlight the square at index 2 (for example)
+			bgColor = color.Green
 		}
 
-		children[i] = common.NewContainer(). // No ID needed for constructor
-							SetID("chess_square_" + strconv.Itoa(i)). // Set optional ID
-							SetBackgroundColor(bgColor()).
-							SetSize(common.Vec2{ // Explicit size
+		children[i] = app.Container().
+			SetID("chess_square_" + strconv.Itoa(i)).
+			SetBackgroundColor(bgColor).
+			SetSize(math.Vec2f32{
 				X: squareSize,
 				Y: squareSize,
 			}).
 			SetPosition(
-				common.Position{
-					Type: common.PositionTypeRelative,
+				ui.Position{
+					Type: ui.PositionTypeRelative,
 				},
 			)
 	}
 
-	// The main container holding the board squares
-	return common.NewContainer().
-		SetID("chessboard_container"). // Optional ID for the board itself
-		// BackgroundColor defaults to transparent, no need to set if squares cover it
-		// BorderColor defaults to transparent
-		SetSize(common.Vec2{X: boardSize, Y: boardSize}). // Explicit size for the main board container
+	return app.Container().
+		SetID("chessboard_container").
+		SetSize(math.Vec2f32{X: boardSize, Y: boardSize}).
 		AddChildren(children...)
 }

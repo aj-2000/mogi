@@ -3,43 +3,47 @@ package examples
 import (
 	"log"
 
-	"mogi/common"
-	"mogi/consts"
+	mogiApp "mogi/app"
+	"mogi/color"
+	"mogi/math"
+	"mogi/ui"
 )
 
-func BuyNowCardComponent() common.IComponent {
-	return common.NewContainer().
+// TODO: how to prevent user to directly use ui.Button etc?
+
+func BuyNowCardComponent(app *mogiApp.App) ui.IComponent {
+	return app.Container().
 		SetID("buy_now_card").
-		SetBackgroundColor(consts.ColorBlack()).
+		SetBackgroundColor(color.Black).
 		AddChild(
-			common.NewContainer().SetBackgroundColor(consts.ColorGreen()).
+			app.Container().SetBackgroundColor(color.Green).
 				SetID("green_rectangle").
-				SetSize(common.Vec2{X: 200, Y: 200}),
+				SetSize(math.Vec2f32{X: 200, Y: 200}),
 		).
 		AddChild(
-			common.NewText("Green Rectangle").
+			app.Text("Green Rectangle").
 				SetID("green_rectangle_text").
 				SetFontSize(24).
-				SetColor(consts.ColorWhite()),
+				SetColor(color.White),
 		).
 		AddChild(
-			common.NewText("$19.99").
+			app.Text("$19.99").
 				SetID("price_text").
 				SetFontSize(16).
-				SetColor(consts.ColorWhite()),
+				SetColor(color.White),
 		).
 		AddChild(
-			common.NewButton("Buy Now").
+			app.Button("Buy Now").
 				SetID("buy_button").
-				SetOnClick(func(_ *common.Button) { log.Println("Buy Now Clicked!") }).
-				SetBackgroundColor(consts.ColorBlue()),
+				SetOnClick(func(_ *ui.Button) { log.Println("Buy Now Clicked!") }).
+				SetBackgroundColor(color.Blue),
 		).
-		SetPosition(common.Position{
+		SetPosition(ui.Position{
 			X:    320,
 			Y:    330,
-			Type: common.PositionTypeAbsolute,
+			Type: ui.PositionTypeAbsolute,
 		}).
-		SetSize(common.Vec2{
+		SetSize(math.Vec2f32{
 			X: 200,
 			Y: 280,
 		})

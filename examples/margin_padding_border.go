@@ -1,36 +1,38 @@
 package examples
 
 import (
-	"mogi/common"
-	"mogi/consts"
+	mogiApp "mogi/app"
+	"mogi/color"
+	"mogi/math"
+	"mogi/ui"
 	"strconv"
 )
 
-func ExampleMarginPaddingBorder() common.IComponent {
+func ExampleMarginPaddingBorder(app *mogiApp.App) ui.IComponent {
 	numBoxes := 64
 	boxSize := float32(50.0)
-	boxes := make([]common.IComponent, numBoxes)
+	boxes := make([]ui.IComponent, numBoxes)
 	for i := range boxes {
-		boxes[i] = common.NewContainer().
+		boxes[i] = app.Container().
 			SetID("box_" + strconv.Itoa(i+1)).
-			SetSize(common.Vec2{X: boxSize, Y: boxSize}).
-			SetBackgroundColor(common.ColorRGBA{
+			SetSize(math.Vec2f32{X: boxSize, Y: boxSize}).
+			SetBackgroundColor(color.RGBA{
 				R: float32(i) / float32(numBoxes),
 				G: float32(i) / float32(numBoxes),
 				B: float32(i) / float32(numBoxes),
 				A: 1.0,
 			}).
-			SetMargin(common.Vec2{X: 5, Y: 5}).
+			SetMargin(math.Vec2f32{X: 5, Y: 5}).
 			AddChild(
-				common.NewText("Box " + strconv.Itoa(i+1)).
+				app.Text("Box " + strconv.Itoa(i+1)).
 					SetID("text_" + strconv.Itoa(i+1)).
 					SetFontSize(12).
-					SetColor(consts.ColorRed()))
+					SetColor(color.Red))
 	}
 
-	return common.NewContainer().
+	return app.Container().
 		SetID("example_mpb_main_container").
-		SetBackgroundColor(consts.ColorOrange()).
+		SetBackgroundColor(color.Orange).
 		AddChildren(
 			boxes...,
 		)

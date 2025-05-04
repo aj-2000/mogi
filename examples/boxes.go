@@ -2,13 +2,15 @@ package examples
 
 import (
 	"math/rand"
-	"mogi/common"
-	"mogi/consts"
+	mogiApp "mogi/app"
+	"mogi/color"
+	"mogi/math"
+	"mogi/ui"
 	"strconv"
 )
 
-func randomColor() common.ColorRGBA {
-	return common.ColorRGBA{
+func randomColor() color.RGBA {
+	return color.RGBA{
 		R: float32(rand.Intn(256)) / 255.0,
 		G: float32(rand.Intn(256)) / 255.0,
 		B: float32(rand.Intn(256)) / 255.0,
@@ -16,58 +18,58 @@ func randomColor() common.ColorRGBA {
 	}
 }
 
-func BoxesOneComponent() common.IComponent {
+func BoxesOneComponent(app *mogiApp.App) ui.IComponent {
 	const numBoxes = 200
 
-	children := make([]common.IComponent, numBoxes)
+	children := make([]ui.IComponent, numBoxes)
 	for i := range children {
 		width := float32(rand.Intn(11)) + 4.05
 		height := float32(rand.Intn(11)) + 4.05
 		id := "box_" + strconv.Itoa(i+1)
 		color := randomColor()
 
-		child := common.NewContainer().
+		child := app.Container().
 			SetID(id).
 			SetBackgroundColor(color).
-			SetSize(common.Vec2{X: width, Y: height})
+			SetSize(math.Vec2f32{X: width, Y: height})
 
 		children[i] = child
 	}
 
-	return common.NewContainer().
+	return app.Container().
 		SetID("boxes_container(red)").
-		SetBackgroundColor(consts.ColorRed()).
+		SetBackgroundColor(color.Red).
 		AddChildren(children...)
 }
 
-func recursiveHelper(currentLevel, maxLevel int, baseID string, maxChildrenPerNode int) common.IComponent {
+func recursiveHelper(app *mogiApp.App, currentLevel, maxLevel int, baseID string, maxChildrenPerNode int) ui.IComponent {
 	id := baseID + "_lvl" + strconv.Itoa(currentLevel) + "_r" + strconv.Itoa(rand.Intn(10000))
 	color := randomColor()
 
-	container := common.NewContainer().
+	container := app.Container().
 		SetID(id).
 		SetBackgroundColor(color).
-		// SetMargin(common.Vec2{X: 2, Y: 2}).
-		SetPadding(common.Vec2{X: 3, Y: 3}).
-		SetBorder(common.Vec2{X: 2, Y: 2}).
+		// SetMargin(math.Vec2f32{X: 2, Y: 2}).
+		SetPadding(math.Vec2f32{X: 3, Y: 3}).
+		SetBorder(math.Vec2f32{X: 2, Y: 2}).
 		SetBorderColor(randomColor()).
 		SetBorderRadius(2).
-		SetGap(common.Vec2{X: 2, Y: 2})
+		SetGap(math.Vec2f32{X: 2, Y: 2})
 
 	if currentLevel >= maxLevel {
 		width := float32(rand.Intn(11)) + 4.05
 		height := float32(rand.Intn(11)) + 4.05
 
-		container.SetSize(common.Vec2{X: width, Y: height})
+		container.SetSize(math.Vec2f32{X: width, Y: height})
 		return container
 	}
 
 	numChildren := rand.Intn(maxChildrenPerNode + 1)
 	if numChildren > 0 {
-		children := make([]common.IComponent, numChildren)
+		children := make([]ui.IComponent, numChildren)
 		for i := 0; i < numChildren; i++ {
 			childID := id + "_c" + strconv.Itoa(i)
-			children[i] = recursiveHelper(currentLevel+1, maxLevel, childID, maxChildrenPerNode)
+			children[i] = recursiveHelper(app, currentLevel+1, maxLevel, childID, maxChildrenPerNode)
 		}
 		container.AddChildren(children...)
 	}
@@ -75,7 +77,8 @@ func recursiveHelper(currentLevel, maxLevel int, baseID string, maxChildrenPerNo
 	return container
 }
 
-func BoxesNLevelComponent(maxLevel int, numRootChildren int, maxChildrenPerNode int) common.IComponent {
+// TODO: how to prevent by value (app), is it even required?
+func BoxesNLevelComponent(app *mogiApp.App, maxLevel int, numRootChildren int, maxChildrenPerNode int) ui.IComponent {
 	if maxLevel < 1 {
 		maxLevel = 1
 	}
@@ -86,15 +89,15 @@ func BoxesNLevelComponent(maxLevel int, numRootChildren int, maxChildrenPerNode 
 		maxChildrenPerNode = 0
 	}
 
-	rootChildren := make([]common.IComponent, numRootChildren)
+	rootChildren := make([]ui.IComponent, numRootChildren)
 	for i := 0; i < numRootChildren; i++ {
 		rootChildID := "root_" + strconv.Itoa(i)
-		rootChildren[i] = recursiveHelper(1, maxLevel, rootChildID, maxChildrenPerNode)
+		rootChildren[i] = recursiveHelper(app, 1, maxLevel, rootChildID, maxChildrenPerNode)
 	}
 
-	rootContainer := common.NewContainer().
+	rootContainer := app.Container().
 		SetID("boxes_n_level_root").
-		SetBackgroundColor(consts.ColorBlack()).
+		SetBackgroundColor(color.Black).
 		AddChildren(rootChildren...)
 
 	return rootContainer

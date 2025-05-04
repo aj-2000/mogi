@@ -1,54 +1,58 @@
 package examples
 
 import (
-	"mogi/common"
-	"mogi/consts"
+	mogiApp "mogi/app"
+	"mogi/color"
+	"mogi/math"
+	"mogi/ui"
 )
 
-func NestedContainersComponent() common.IComponent {
-	return common.NewContainer().
+// TODO: should we receive Vec2f32 or (x, y) as parameters?
+
+func NestedContainersComponent(app *mogiApp.App) ui.IComponent {
+	return app.Container().
 		SetID("nested_containers").
-		SetBackgroundColor(consts.ColorBlack()).
-		SetPosition(common.Position{Type: common.PositionTypeAbsolute}).
+		SetBackgroundColor(color.Black).
+		SetPosition(ui.Position{Type: ui.PositionTypeAbsolute}).
 		AddChildren(
-			common.NewContainer().
+			app.Container().
 				SetID("container_1").
-				SetBackgroundColor(consts.ColorBlue()).
-				SetPosition(common.Position{Type: common.PositionTypeAbsolute}).
+				SetBackgroundColor(color.Blue).
+				SetPosition(ui.Position{Type: ui.PositionTypeAbsolute}).
 				AddChildren(
-					common.NewContainer().
+					app.Container().
 						SetID("container_1_1").
-						SetBackgroundColor(consts.ColorBrown()).
+						SetBackgroundColor(color.Brown).
 						AddChildren(
-							common.NewContainer().
+							app.Container().
 								SetID("container_1_1_1").
-								SetSize(common.Vec2{X: 200, Y: 100}).
-								SetPosition(common.Position{Type: common.PositionTypeAbsolute}).
-								SetBackgroundColor(consts.ColorRed()),
-							common.NewContainer().
+								SetSize(math.Vec2f32{X: 200, Y: 100}).
+								SetPosition(ui.Position{Type: ui.PositionTypeAbsolute}).
+								SetBackgroundColor(color.Red),
+							app.Container().
 								SetID("container_1_1_2").
-								SetSize(common.Vec2{X: 300, Y: 400}).
-								SetPosition(common.Position{Type: common.PositionTypeAbsolute}).
-								SetBackgroundColor(consts.ColorPink()),
+								SetSize(math.Vec2f32{X: 300, Y: 400}).
+								SetPosition(ui.Position{Type: ui.PositionTypeAbsolute}).
+								SetBackgroundColor(color.Pink),
 						),
 				),
-			common.NewContainer().
+			app.Container().
 				SetID("container_2").
-				SetBackgroundColor(consts.ColorGreen()).
-				SetPosition(common.Position{Type: common.PositionTypeAbsolute}).
+				SetBackgroundColor(color.Green).
+				SetPosition(ui.Position{Type: ui.PositionTypeAbsolute}).
 				AddChildren(
-					common.NewContainer().
+					app.Container().
 						SetID("container_2_1").
-						SetBackgroundColor(consts.ColorOrange()).
+						SetBackgroundColor(color.Orange).
 						AddChildren(
-							common.NewContainer().
+							app.Container().
 								SetID("container_2_1_1").
-								SetBackgroundColor(consts.ColorPurple()).
-								SetSize(common.Vec2{X: 400, Y: 200}),
-							common.NewContainer().
+								SetBackgroundColor(color.Purple).
+								SetSize(math.Vec2f32{X: 400, Y: 200}),
+							app.Container().
 								SetID("container_2_1_2").
-								SetBackgroundColor(consts.ColorGray()).
-								SetSize(common.Vec2{X: 100, Y: 300}),
+								SetBackgroundColor(color.Gray).
+								SetSize(math.Vec2f32{X: 100, Y: 300}),
 						),
 				),
 		)

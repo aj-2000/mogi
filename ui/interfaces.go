@@ -1,0 +1,49 @@
+package ui
+
+import (
+	"mogi/color"
+	"mogi/math"
+)
+
+type IComponent interface {
+	Kind() ComponentKind
+	Pos() Position
+	Size() math.Vec2f32
+	ID() string
+	FullID() string
+
+	BorderColor() color.RGBA
+	BackgroundColor() color.RGBA
+	Margin() math.Vec2f32
+	Padding() math.Vec2f32
+	Border() math.Vec2f32
+	Gap() math.Vec2f32
+	BorderRadius() float32
+	SetParent(p IComponent)
+
+	AbsolutePos() math.Vec2f32
+	Parent() IComponent
+	Children() []IComponent
+	FlexItem() *FlexItemProps
+	Display() Display
+	IsPointInComponent(point math.Vec2f32) bool
+
+	// --- Internal Setters (used by layout engine) ---
+	// These need to be part of the interface if the layout engine
+	// works purely on IComponent. Alternatively, the layout engine
+	// could use type assertions, but this is cleaner.
+	setPos(Position)
+	setSize(math.Vec2f32)
+	setGap(gap math.Vec2f32)
+	setMargin(margin math.Vec2f32)
+	setBorderRadius(radius float32)
+	setDisplay(Display)
+	setBorderColor(color color.Color)
+	setBackgroundColor(color color.Color)
+	setBorder(border math.Vec2f32)
+	setPadding(padding math.Vec2f32)
+	setID(id string)
+	setFullID(fullID string)
+	// Optional: Method to get intrinsic size (needed for flex-basis: auto)
+	// CalculateIntrinsicSize(available math.Vec2f32 ) math.Vec2f32
+}

@@ -47,6 +47,7 @@ TODO: (Optionally, but recommended) Update the C Renderer struct to cache curren
 18. border,padding,border - t,b,r,l
 19. renderer interface
 20. respect root container margin
+21. src folder
 // TODO: Benchmarking
 // TODO: SIMD implementations
 // TODO: bezier curves
@@ -65,3 +66,12 @@ Complex shapes without modifying geometry.
 DevTools
 1. Onhover -> border, pos, size
 
+
+App -> 
+
+mogi
+	/layout ->
+	/render -> 
+	/components ->
+	/app
+	/consts ->

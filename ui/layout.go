@@ -1,20 +1,11 @@
-package common
+package ui
 
 import (
 	"fmt"
+	"mogi/math"
 )
 
-// Assume Vec2, Position, PositionTypeAbsolute, PositionTypeRelative,
-// DisplayBlock, IComponent, Container, Text, Button, and their methods
-// (ID, Size, Pos, Children, Parent, setPos, SetSize, setSize, Display,
-// Content, Label) are defined elsewhere.
-
-// Assume a max helper function exists:
-// func max(a, b float32) float32 { ... }
-
-// LayoutEngine calculates component positions and sizes based on layout rules.
 type LayoutEngine struct {
-	// CalculateTextWidth estimates the width of a string given a font size.
 	CalculateTextWidth func(text string, fontSize float32) float32
 	alive              map[string]bool
 	count              map[string]int
@@ -24,10 +15,13 @@ type LayoutEngine struct {
 type ComponentState struct {
 }
 
-// Reset at the top of each frame:
 func (le *LayoutEngine) BeginLayout() {
 	le.alive = make(map[string]bool, len(le.state))
 	le.count = make(map[string]int)
+	// TODO: mark active components as alive
+	// TODO: mark inactive components as not alive
+	// TODO: show warning if duplicate IDs are found
+
 }
 
 // Prune at the end of each frame:
@@ -49,8 +43,8 @@ func NewLayoutEngine(f func(string, float32) float32) *LayoutEngine {
 	}
 }
 func (le *LayoutEngine) Layout(root IComponent,
-	origin Vec2,
-	availableSize Vec2) {
+	origin math.Vec2f32,
+	availableSize math.Vec2f32) {
 	// ─── PASS 0: assign a stable full‐path ID to every node ───
 	// Seed with “root” so your first widgets come out as “root/container#0(…)”
 	le.assignIDsRecursive(root)
@@ -116,7 +110,7 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 	if comp.Display() == DisplayNone {
 		return
 	}
-	displayStr := comp.FullID()
+	displayStr := comp.ID()
 
 	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Padding:%.1f,%.1f Margin:%.1f,%.1f Gap:%.1f,%.1f Border:%.1f,%.1f]\n",
 		indent, displayStr, comp.Size().X, comp.Size().Y,
@@ -137,10 +131,10 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 // calculateSizeRecursive determines the size of each component, starting from
 // the leaves and moving up. It respects fixed sizes and calculates content-based
 // sizes otherwise. availableSize provides the constraints from the parent.
-func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Vec2) Vec2 {
+func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize math.Vec2f32) math.Vec2f32 {
 	if comp == nil || comp.Display() == DisplayNone {
 		// Skip if component is nil or marked as not displayed.
-		return Vec2{X: 0, Y: 0}
+		return math.Vec2f32{X: 0, Y: 0}
 	}
 	fixedSize := comp.Size() // User-defined fixed size
 	hasFixedWidth := fixedSize.X > 0
@@ -151,7 +145,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 	paddingAndBorderX := padding.X + border.X
 	paddingAndBorderY := padding.Y + border.Y
 
-	var calculatedContentSize Vec2 // Size needed by content only
+	var calculatedContentSize math.Vec2f32 // Size needed by content only
 
 	switch c := comp.(type) {
 	case *Container:
@@ -174,7 +168,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 		childAvailableSize.Y = max(0, childAvailableSize.Y)
 
 		// Calculate children sizes first, passing the constrained available size.
-		var childrenSizes []Vec2
+		var childrenSizes []math.Vec2f32
 		for _, child := range c.Children() {
 			childrenSizes = append(childrenSizes, le.calculateSizeRecursive(child, childAvailableSize))
 		}
@@ -183,7 +177,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 		// The recursive calls above were still needed for the children themselves.
 		if hasFixedWidth && hasFixedHeight {
 			// Use fixed size directly (padding/border are included implicitly)
-			calculatedContentSize = Vec2{
+			calculatedContentSize = math.Vec2f32{
 				X: max(0, fixedSize.X-2*paddingAndBorderX),
 				Y: max(0, fixedSize.Y-2*paddingAndBorderY),
 			}
@@ -266,7 +260,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 		textPadding := float32(0.0) // Example: Add text-specific padding if necessary
 		width := le.CalculateTextWidth(c.Content, fontSize) + 2*textPadding
 		height := fontSize + 2*textPadding // Basic height based on font size
-		calculatedContentSize = Vec2{X: width, Y: height}
+		calculatedContentSize = math.Vec2f32{X: width, Y: height}
 
 	case *Button:
 		// Assume button includes internal padding within its calculation logic
@@ -277,7 +271,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 		textWidth := le.CalculateTextWidth(c.Label, c.FontSize())
 		width := textWidth + 2*buttonPaddingX
 		height := c.FontSize() + 2*buttonPaddingY
-		calculatedContentSize = Vec2{X: width, Y: height}
+		calculatedContentSize = math.Vec2f32{X: width, Y: height}
 
 	case *Image:
 		// Assume c.Size() returns the intrinsic size of the image content.
@@ -287,7 +281,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 	default:
 		// Return zero size for unknown types, maybe log a warning.
 		fmt.Printf("Warning: Unsupported component type for size calculation: %T\n", comp)
-		calculatedContentSize = Vec2{X: 0, Y: 0}
+		calculatedContentSize = math.Vec2f32{X: 0, Y: 0}
 		// Or panic:
 		// panic(fmt.Sprintf("Unsupported component type for size calculation: %T", comp))
 	}
@@ -297,7 +291,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 	naturalHeight := calculatedContentSize.Y + 2*paddingAndBorderY
 
 	// Final size respects fixed dimensions if they are set.
-	finalSize := Vec2{
+	finalSize := math.Vec2f32{
 		X: naturalWidth,
 		Y: naturalHeight,
 	}
@@ -322,7 +316,7 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 // calculatePositionRecursive determines the position of each component relative
 // to its parent, starting from the root and moving down.
 // parentTopLeft is the absolute coordinate where the parent *starts* placing this component.
-func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLeft Vec2) {
+func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLeft math.Vec2f32) {
 	if comp == nil || comp.Display() == DisplayNone {
 		// Skip if component is nil or marked as not displayed.
 		return
@@ -336,7 +330,7 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 	containerSize := comp.Size()
 	containerSize.X -= comp.Padding().X + comp.Border().X
 	containerSize.Y -= comp.Padding().Y + comp.Border().Y
-	var contentOrigin Vec2 = parentTopLeft
+	var contentOrigin math.Vec2f32 = parentTopLeft
 
 	// Now, handle the layout *within* this component (positioning its children)
 	switch c := comp.(type) {
@@ -407,7 +401,7 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 
 			// Calculate the child's absolute top-left screen coordinate.
 			// This is needed as the reference point (`parentTopLeft`) for positioning the child's *own* children.
-			childAbsoluteTopLeft := Vec2{
+			childAbsoluteTopLeft := math.Vec2f32{
 				X: containerContentOrigin.X + currentLineXOffset, // Parent origin + child relative offset
 				Y: containerContentOrigin.Y + currentLineYOffset, // Parent origin + child relative offset
 			}
