@@ -19,6 +19,21 @@ import (
 	"unsafe"
 )
 
+func (app *App) Container() *common.Container {
+	return common.NewContainer()
+}
+
+func (app *App) Text(content string) *common.Text {
+	return common.NewText(content)
+}
+
+func (app *App) Button(label string) *common.Button {
+	return common.NewButton(label)
+}
+
+type ComponentState struct {
+}
+
 type App struct {
 	fonts         map[string]*C.FontData
 	textures      map[string]C.GLuint
@@ -96,12 +111,13 @@ func (app *App) Run(f func(app *App) common.IComponent) {
 		log.Fatalln("Renderer is not initialized")
 	}
 	// Define these outside the closure to persist state across frames
-	layoutEngine := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
+	le := common.NewLayoutEngine(func(s string, fontSize float32) float32 {
 		font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
 		return app.CalculateTextWidth(font, s)
 	})
 
 	for C.window_should_close(app.renderer) == 0 {
+		le.BeginLayout()
 		windowSize := app.GetWindowSize()
 
 		current_time := float32(C.get_current_time(app.renderer))
@@ -115,12 +131,14 @@ func (app *App) Run(f func(app *App) common.IComponent) {
 		root := f(app)
 		componentRenderer := &ComponentRenderer{Component: root}
 
-		layoutEngine.Layout(root, common.Vec2{}, windowSize)
+		le.Layout(root, common.Vec2{}, windowSize)
+		// HandleOnClicks(app, root)
 
 		C.clear_screen(app.renderer, C.ColorRGBA{r: 0.0, g: 0.0, b: 0.0, a: 1.0})
 		componentRenderer.Render(app)
 		C.present_screen(app.renderer)
 		C.handle_events(app.renderer)
+		le.EndLayout()
 	}
 }
 
@@ -215,8 +233,48 @@ func goColorToCColorRGBA(color common.ColorRGBA) C.ColorRGBA {
 	}
 }
 
+func HandleOnClicks(app *App, component common.IComponent) {
+	if component == nil || component.Display() == common.DisplayNone {
+		return
+	}
+
+	// Get cursor state once per component
+	cursor := C.get_cursor_pos(app.renderer)
+	cPos := common.Vec2{X: float32(cursor.x), Y: float32(cursor.y)}
+	mouseDown := C.is_mouse_button_pressed(app.renderer, 0) != 0      // held this frame
+	mouseReleased := C.is_mouse_button_released(app.renderer, 0) != 0 // just went up this frame
+
+	// If this is a Button, handle its pressed/released logic
+	if btn, ok := component.(*common.Button); ok {
+		over := btn.IsPointInComponent(cPos)
+		btn.MouseOver = over
+
+		// 1) if the cursor goes down inside the button, mark it pressed
+		if over && mouseDown {
+			btn.Pressed = true
+		}
+
+		if btn.Pressed && !over {
+			btn.Pressed = false // reset your state
+		}
+
+		// 2) if it was pressed and now you see the release, fire **once**:
+		if btn.Pressed && mouseReleased {
+			btn.Pressed = false // reset your state
+			if btn.Callback != nil {
+				btn.Callback(btn)
+			}
+		}
+	}
+
+	// recurse into children
+	for _, child := range component.Children() {
+		HandleOnClicks(app, child)
+	}
+}
+
 func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or RendererPtr directly
-	if cr.Component == nil {
+	if cr.Component == nil || cr.Component.Display() == common.DisplayNone {
 		return
 	}
 
@@ -394,24 +452,110 @@ func main() {
 
 		app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 
+		children := []common.IComponent{
+			examples.ChessboardComponent(),
+			examples.BuyNowCardComponent(),
+			examples.BoxesOneComponent(),
+			examples.BoxesNLevelComponent(3, 3, 100),
+			examples.NestedContainersComponent(),
+			examples.ClayDemoComponent(app.GetWindowSize()),
+			examples.ExampleMarginPaddingBorder(),
+		}
+
+		setTabIndex := func(index int) {
+			for i, comp := range children {
+				display := common.DisplayNone
+				if i == index {
+					display = common.DisplayBlock
+				}
+				switch c := comp.(type) {
+				case *common.Button:
+					c.SetDisplay(display)
+				case *common.Text:
+					c.SetDisplay(display)
+				case *common.Image:
+					c.SetDisplay(display)
+				case *common.Container:
+					c.SetDisplay(display)
+				default:
+					log.Printf("Unknown component type: %T", c)
+
+				}
+
+			}
+		}
+
+		_ = common.NewContainer().
+			SetID("tabs").
+			SetBackgroundColor(consts.ColorMagenta()).
+			AddChildren(
+				common.NewContainer().
+					SetID("tabs_container").
+					SetBackgroundColor(consts.ColorPink()).
+					AddChildren(children...),
+				common.NewContainer().
+					SetID("tab_bar").
+					SetBackgroundColor(consts.ColorGray()).
+					SetBorderRadius(5).
+					SetBorder(common.Vec2{X: 1, Y: 1}).
+					SetBorderColor(consts.ColorBlack()).
+					SetPadding(common.Vec2{X: 4, Y: 4}).
+					SetGap(common.Vec2{X: 3, Y: 3}).
+					SetMargin(common.Vec2{X: 3, Y: 3}).
+					SetPosition(common.Position{X: 10, Y: 10, Type: common.PositionTypeAbsolute}).
+					AddChildren(
+						common.NewButton("Chessboard").
+							SetDisplay(common.DisplayInline).
+							SetOnClick(func(self *common.Button) {
+								setTabIndex(0)
+							}),
+						common.NewButton("Buy Now").
+							SetDisplay(common.DisplayInline).
+							SetOnClick(func(self *common.Button) {
+								setTabIndex(1)
+							}),
+						common.NewButton("Boxes One").
+							SetDisplay(common.DisplayInline).
+							SetOnClick(func(self *common.Button) {
+								setTabIndex(2)
+							}),
+						common.NewButton("Boxes N Level").
+							SetDisplay(common.DisplayInline).
+							SetOnClick(func(self *common.Button) {
+								setTabIndex(3)
+							}),
+						common.NewButton("Nested Containers").
+							SetDisplay(common.DisplayInline).
+							SetOnClick(func(self *common.Button) {
+								setTabIndex(4)
+							}),
+						common.NewButton("Clay Demo").
+							SetDisplay(common.DisplayInline).
+							SetOnClick(func(self *common.Button) {
+								setTabIndex(5)
+							}),
+						common.NewButton("Margin Padding Border").
+							SetDisplay(common.DisplayInline).
+							SetOnClick(func(self *common.Button) {
+								setTabIndex(6)
+							}),
+					),
+			).SetSize(app.GetWindowSize())
+
 		app.Run(func(app *App) common.IComponent {
+
 			bgColor := consts.ColorYellow()
-			return common.NewContainer().
+			r := app.Container().
 				SetID("app_container").
 				SetBackgroundColor(bgColor).
 				AddChildren( // Add all children at once
-					// examples.ChessboardComponent(),
-					// examples.BuyNowCardComponent(),
-					// examples.BoxesOneComponent(),
-					examples.BoxesNLevelComponent(3, 3, 100), // TODO: WTF Happening here?
-				// examples.NestedContainersComponent(),
-				// examples.ClayDemoComponent(windowSize),
-				// examples.ExampleMarginPaddingBorder(),
-				// examples.FPSCounterComponent(common.Vec2{X: windowSize.X - 200, Y: 20},  app.GetWindowSize()),
+					// tabs,
+					examples.FPSCounterComponent(common.Vec2{X: app.GetWindowSize().X - 180, Y: 20}, app.GetFPS),
 				).
 				// SetMargin(common.Vec2{X: 3, Y: 3}).
-				SetPadding(common.Vec2{X: 4, Y: 4}).
-				SetGap(common.Vec2{X: 3, Y: 3})
+				SetPadding(common.Vec2{X: 4, Y: 4})
+
+			return r
 		})
 	}()
 	wg.Wait()

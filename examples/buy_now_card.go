@@ -31,7 +31,7 @@ func BuyNowCardComponent() common.IComponent {
 		AddChild(
 			common.NewButton("Buy Now").
 				SetID("buy_button").
-				SetOnClick(func() { log.Println("Buy Now Clicked!") }).
+				SetOnClick(func(_ *common.Button) { log.Println("Buy Now Clicked!") }).
 				SetBackgroundColor(consts.ColorBlue()),
 		).
 		SetPosition(common.Position{

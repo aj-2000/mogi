@@ -57,6 +57,21 @@ const (
 	ImageKind
 )
 
+func (k ComponentKind) String() string {
+	switch k {
+	case ContainerKind:
+		return "Container"
+	case TextKind:
+		return "Text"
+	case ButtonKind:
+		return "Button"
+	case ImageKind:
+		return "Image"
+	default:
+		return "Unknown"
+	}
+}
+
 // --- Flexbox Enums and Structs (from previous example) ---
 
 type FlexDirection int
@@ -157,6 +172,7 @@ type IComponent interface {
 	Pos() Position // Position calculated by layout engine
 	Size() Vec2    // Size calculated by layout engine
 	ID() string
+	FullID() string
 
 	BorderColor() ColorRGBA
 	Margin() Vec2
@@ -171,6 +187,7 @@ type IComponent interface {
 	Children() []IComponent
 	FlexItem() *FlexItemProps // Accessor for flex item properties
 	Display() Display
+	IsPointInComponent(point Vec2) bool
 
 	// --- Internal Setters (used by layout engine) ---
 	// These need to be part of the interface if the layout engine
@@ -185,7 +202,8 @@ type IComponent interface {
 	setBorderColor(color ColorRGBA)
 	setBorder(border Vec2)
 	setPadding(padding Vec2)
-
+	setID(id string)
+	setFullID(fullID string)
 	// Optional: Method to get intrinsic size (needed for flex-basis: auto)
 	// CalculateIntrinsicSize(available Vec2) Vec2
 }
@@ -197,6 +215,7 @@ type Component struct {
 	pos          Position // Calculated by layout engine
 	size         Vec2     // Calculated by layout engine
 	id           string
+	fullID       string
 	children     []IComponent
 	parent       IComponent // Optional but useful for layout/events
 	display      Display
@@ -208,6 +227,7 @@ type Component struct {
 	borderColor  ColorRGBA // Default black
 	// Flex properties for when THIS component is an ITEM in a flex container
 	flexItemProps FlexItemProps
+	tick          func(self IComponent)
 }
 
 // --- Base Constructor (Internal) ---
@@ -233,6 +253,7 @@ func newComponentBase(kind ComponentKind) Component {
 func (c *Component) Kind() ComponentKind      { return c.kind }
 func (c *Component) Pos() Position            { return c.pos }
 func (c *Component) Size() Vec2               { return c.size }
+func (c *Component) FullID() string           { return c.fullID }
 func (c *Component) ID() string               { return c.id }
 func (c *Component) Children() []IComponent   { return c.children }
 func (c *Component) FlexItem() *FlexItemProps { return &c.flexItemProps }
@@ -250,6 +271,12 @@ func (c *Component) AbsolutePos() Vec2 {
 		}
 	}
 	return c.pos.Vec2()
+}
+
+func (c *Component) IsPointInComponent(point Vec2) bool {
+	absPos := c.AbsolutePos()
+	return point.X >= absPos.X && point.X <= absPos.X+c.size.X &&
+		point.Y >= absPos.Y && point.Y <= absPos.Y+c.size.Y
 }
 
 func (c *Component) SetParent(p IComponent) {
@@ -284,6 +311,12 @@ func (c *Component) setBorderRadius(radius float32) {
 func (c *Component) setGap(gap Vec2) { c.gap = gap }
 func (c *Component) setBorderColor(color ColorRGBA) {
 	c.borderColor = color
+}
+func (c *Component) setID(id string) {
+	c.id = id
+}
+func (c *Component) setFullID(fullID string) {
+	c.fullID = fullID
 }
 
 // --- Fluent Setters for Flex Item Properties (on Base Component) ---
@@ -320,11 +353,6 @@ func (c *Component) SetOrder(order int) *Component {
 	return c
 }
 
-func (c *Component) SetID(id string) *Component {
-	c.id = id
-	return c
-}
-
 // --- Components ---
 
 type Container struct {
@@ -354,7 +382,7 @@ func NewContainer() *Container {
 // --- Fluent Setters for Container Visual Properties ---
 
 func (c *Container) SetID(id string) *Container {
-	c.Component.SetID(id)
+	c.Component.setID(id)
 	return c
 }
 
@@ -519,7 +547,7 @@ func NewText(content string) *Text {
 // --- Fluent Setters for Text ---
 
 func (t *Text) SetID(id string) *Text {
-	t.Component.SetID(id)
+	t.Component.setID(id)
 	return t
 }
 
@@ -538,6 +566,11 @@ func (t *Text) SetFontSize(size float32) *Text {
 		size = 16.0 // Reset to default if invalid
 	}
 	t.FontSize = size
+	return t
+}
+
+func (t *Text) SetDisplay(d Display) *Text {
+	t.Component.setDisplay(d)
 	return t
 }
 
@@ -591,10 +624,10 @@ func (t *Text) SetOrder(order int) *Text {
 type Button struct {
 	Component
 	Label     string
-	Callback  func()
-	Pressed   bool // State: currently pressed down
-	Released  bool // State: just released (useful for click detection)
-	MouseOver bool // State: mouse is hovering
+	Callback  func(comp *Button) // Callback function to be executed on click
+	Pressed   bool               // State: currently pressed down
+	Released  bool               // State: just released (useful for click detection)
+	MouseOver bool               // State: mouse is hovering
 	// Add visual properties like background color, border, etc.
 	BackgroundColor ColorRGBA
 	HoverColor      ColorRGBA
@@ -607,7 +640,7 @@ func NewButton(label string) *Button {
 	b := &Button{
 		Component: newComponentBase(ButtonKind),
 		Label:     label,
-		Callback:  func() {},
+		Callback:  nil,
 		// Default visual styles
 		BackgroundColor: ColorRGBA{0.2, 0.4, 0.8, 1}, // Blueish
 		HoverColor:      ColorRGBA{0.3, 0.5, 0.9, 1},
@@ -621,7 +654,12 @@ func NewButton(label string) *Button {
 // --- Fluent Setters for Button ---
 
 func (b *Button) SetID(id string) *Button {
-	b.Component.SetID(id)
+	b.Component.setID(id)
+	return b
+}
+
+func (b *Button) SetDisplay(d Display) *Button {
+	b.Component.setDisplay(d)
 	return b
 }
 
@@ -630,12 +668,12 @@ func (b *Button) SetLabel(label string) *Button {
 	return b
 }
 
-func (b *Button) SetOnClick(callback func()) *Button {
+func (b *Button) SetOnClick(callback func(self *Button)) *Button {
 	if callback != nil {
 		b.Callback = callback
 	} else {
 		// Provide a no-op callback if nil is passed, or keep default
-		b.Callback = func() {}
+		b.Callback = nil
 	}
 	return b
 }
@@ -726,7 +764,12 @@ func NewImage(path string) *Image {
 
 // --- Fluent Setters for Image ---
 func (i *Image) SetID(id string) *Image {
-	i.Component.SetID(id)
+	i.Component.setID(id)
+	return i
+}
+
+func (i *Image) SetDisplay(d Display) *Image {
+	i.Component.setDisplay(d)
 	return i
 }
 
@@ -737,10 +780,5 @@ func (i *Image) SetPosition(pos Position) *Image {
 
 func (i *Image) SetSize(size Vec2) *Image {
 	i.Component.setSize(size)
-	return i
-}
-
-func (i *Image) SetDisplay(d Display) *Image {
-	i.Component.setDisplay(d)
 	return i
 }

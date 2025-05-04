@@ -340,6 +340,28 @@ float get_current_time(void* renderer_ptr);
  */
 Vec2 get_window_size(void* renderer_ptr);
 
+/**
+ * @brief Gets the current mouse position in screen coordinates.
+ * @param renderer_ptr Renderer context.
+ * @return A Vec2 structure containing the mouse position (x, y) in pixels.
+ */
+Vec2 get_cursor_pos(void* renderer_ptr);
+
+/**
+ * @brief Checks if a specific mouse button is currently pressed.
+ * @param renderer_ptr Renderer context.
+ * @param button The mouse button to check (e.g., GLFW_MOUSE_BUTTON_LEFT).
+ * @return Non-zero if the button is pressed, 0 otherwise.
+ */
+int is_mouse_button_pressed(void* renderer_ptr, int button);
+
+/**
+ * @brief Checks if a specific mouse button was released (not currently pressed).
+ * @param renderer_ptr Renderer context.
+ * @param button The mouse button to check (e.g., GLFW_MOUSE_BUTTON_LEFT).
+ * @return Non-zero if the button was released, 0 otherwise.
+ */
+int is_mouse_button_released(void* renderer_ptr, int button);
 
 #ifdef __cplusplus
 } // extern "C"

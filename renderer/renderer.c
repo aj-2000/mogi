@@ -900,4 +900,28 @@ float get_current_time(void* renderer_ptr) {
     return (float)glfwGetTime(); // If using GLFW for timing
 }
 
+Vec2 get_cursor_pos(void* renderer_ptr) {
+    Renderer* ctx = (Renderer*)renderer_ptr;
+    Vec2 mouse_pos = {0.0f, 0.0f};
+    if (!ctx || !ctx->window) return mouse_pos;
+    // Get mouse position using GLFW
+    double x, y;
+    glfwGetCursorPos(ctx->window, &x, &y);
+    mouse_pos.x = (float)x;
+    mouse_pos.y = (float)y;
+    return mouse_pos;
+}
 
+int is_mouse_button_pressed(void* renderer_ptr, int button) {
+    Renderer* ctx = (Renderer*)renderer_ptr;
+    if (!ctx || !ctx->window) return 0;
+    // Check mouse button state using GLFW
+    return glfwGetMouseButton(ctx->window, button) == GLFW_PRESS;
+}
+
+int is_mouse_button_released(void* renderer_ptr, int button) {
+    Renderer* ctx = (Renderer*)renderer_ptr;
+    if (!ctx || !ctx->window) return 0;
+    // Check mouse button state using GLFW
+    return glfwGetMouseButton(ctx->window, button) == GLFW_RELEASE;
+}

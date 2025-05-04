@@ -16,35 +16,110 @@ import (
 type LayoutEngine struct {
 	// CalculateTextWidth estimates the width of a string given a font size.
 	CalculateTextWidth func(text string, fontSize float32) float32
+	alive              map[string]bool
+	count              map[string]int
+	state              map[string]ComponentState
+}
+
+type ComponentState struct {
+}
+
+// Reset at the top of each frame:
+func (le *LayoutEngine) BeginLayout() {
+	le.alive = make(map[string]bool, len(le.state))
+	le.count = make(map[string]int)
+}
+
+// Prune at the end of each frame:
+func (le *LayoutEngine) EndLayout() {
+	for id := range le.state {
+		if !le.alive[id] {
+			delete(le.state, id)
+		}
+	}
 }
 
 // NewLayoutEngine creates a layout engine.
 func NewLayoutEngine(f func(string, float32) float32) *LayoutEngine {
 	return &LayoutEngine{
 		CalculateTextWidth: f,
+		alive:              make(map[string]bool),
+		count:              make(map[string]int),
+		state:              make(map[string]ComponentState),
+	}
+}
+func (le *LayoutEngine) Layout(root IComponent,
+	origin Vec2,
+	availableSize Vec2) {
+	// ─── PASS 0: assign a stable full‐path ID to every node ───
+	// Seed with “root” so your first widgets come out as “root/container#0(…)”
+	le.assignIDsRecursive(root)
+
+	// ─── PASS 1: intrinsic size (bottom‐up) ───
+	le.calculateSizeRecursive(root, availableSize)
+
+	// ─── PASS 2: positions (top‐down) ───
+	le.calculatePositionRecursive(root, origin)
+
+	// Optional debug dump
+	// fmt.Println("--- Layout Complete ---")
+	// le.printComponentTree(root, "")
+	// fmt.Println("-----------------------")
+}
+
+func (le *LayoutEngine) registerID(fullID string) {
+	if !le.alive[fullID] {
+		le.alive[fullID] = true
+		if _, ok := le.state[fullID]; !ok {
+			le.state[fullID] = ComponentState{}
+		}
 	}
 }
 
-// Layout computes the layout for the component tree starting at root.
-// availableSize provides the initial constraints for the root component.
-func (le *LayoutEngine) Layout(root IComponent, origin Vec2, availableSize Vec2) {
-	// Pass 1: Calculate intrinsic sizes (bottom-up)
-	le.calculateSizeRecursive(root, availableSize)
+func (le *LayoutEngine) nextFullID(parent, widgetType, userID string) string {
+	key := parent + "/" + widgetType
+	idx := le.count[key]
+	le.count[key] = idx + 1
 
-	// Pass 2: Calculate positions (top-down)
-	// Root component starts at (0, 0) relative to its own frame.
-	le.calculatePositionRecursive(root, origin)
+	// fallback if caller didn't supply an ID
+	id := userID
 
-	// Optional: Print the final tree for debugging
-	fmt.Println("--- Layout Complete ---")
-	le.printComponentTree(root, "")
-	fmt.Println("---------------------")
+	segment := fmt.Sprintf("%s#%d(%s)", widgetType, idx, id)
+	full := parent + "/" + segment
+
+	le.registerID(full)
+	return full
+}
+
+// assignIDsRecursive walks the tree and gives each component
+// a full‐path ID before any layout work happens.
+func (le *LayoutEngine) assignIDsRecursive(comp IComponent) {
+	// Ask your App (or UIContext) for the new full ID:
+	//   widgetType := comp.Type() // e.g. "container", "button", "text"
+	//   userID     := comp.UserID() // whatever the caller set, or "" if none
+	fullID := "root"
+	if comp.Parent() != nil {
+		fullID = comp.Parent().FullID()
+	}
+	newFullID := le.nextFullID(fullID, comp.Kind().String(), comp.ID())
+	comp.setFullID(newFullID)
+
+	// Recurse into children
+	for _, child := range comp.Children() {
+		le.assignIDsRecursive(child)
+	}
 }
 
 // printComponentTree is a helper for debugging the layout structure.
 func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
+
+	if comp.Display() == DisplayNone {
+		return
+	}
+	displayStr := comp.FullID()
+
 	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Padding:%.1f,%.1f Margin:%.1f,%.1f Gap:%.1f,%.1f Border:%.1f,%.1f]\n",
-		indent, comp.ID(), comp.Size().X, comp.Size().Y,
+		indent, displayStr, comp.Size().X, comp.Size().Y,
 		comp.Pos().X, comp.Pos().Y, comp.Pos().Type,
 		comp.Padding().X, comp.Padding().Y,
 		comp.Margin().X, comp.Margin().Y,
@@ -63,6 +138,10 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 // the leaves and moving up. It respects fixed sizes and calculates content-based
 // sizes otherwise. availableSize provides the constraints from the parent.
 func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Vec2) Vec2 {
+	if comp == nil || comp.Display() == DisplayNone {
+		// Skip if component is nil or marked as not displayed.
+		return Vec2{X: 0, Y: 0}
+	}
 	fixedSize := comp.Size() // User-defined fixed size
 	hasFixedWidth := fixedSize.X > 0
 	hasFixedHeight := fixedSize.Y > 0
@@ -244,6 +323,10 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize Ve
 // to its parent, starting from the root and moving down.
 // parentTopLeft is the absolute coordinate where the parent *starts* placing this component.
 func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLeft Vec2) {
+	if comp == nil || comp.Display() == DisplayNone {
+		// Skip if component is nil or marked as not displayed.
+		return
+	}
 	compPosInfo := comp.Pos()
 	if compPosInfo.Type == PositionTypeAbsolute {
 		parentTopLeft.X = compPosInfo.X

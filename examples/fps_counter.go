@@ -6,11 +6,10 @@ import (
 	"mogi/consts"
 )
 
-func FPSCounterComponent(pos common.Vec2, avgFps float32) common.IComponent {
-	fpsTextContent := fmt.Sprintf("Avg. FPS: %.0f", avgFps)
-
-	fpsText := common.NewText(fpsTextContent).
-		SetID("fps_counter_text").
+func FPSCounterComponent(pos common.Vec2, getFps func() float32) common.IComponent {
+	fps := fmt.Sprintf("FPS: %.0f", getFps())
+	fpsText := common.NewText(fps).
+		SetID("").
 		SetFontSize(24).
 		SetColor(consts.ColorRed())
 
