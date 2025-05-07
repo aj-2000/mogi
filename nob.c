@@ -13,7 +13,7 @@
 #define RENDERER_DIR "./renderer"
 #define RENDERER_LIB_A "/librenderer.a"
 #define RENDERER_LIB_H "/librenderer.h"
-#define OUTPUT_EXE BIN_DIR "/goui.exe"
+#define OUTPUT_EXE BIN_DIR "/mogi.exe"
 #define INCLUDE_DIR "./renderer/include"
 #define LIB_DIR "./renderer/lib/Release"
 
@@ -41,9 +41,13 @@ int main(int argc, char **argv) {
 
     // Check for "build-unilog" flag
     bool build_renderer = false;
+    bool run = false;
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--build-renderer") == 0 || strcmp(argv[i], "-r") == 0) {
+        if (strcmp(argv[i], "--build-renderer") == 0 || strcmp(argv[i], "-br") == 0) {
             build_renderer = true;
+        }
+        if (strcmp(argv[i], "--run") == 0 || strcmp(argv[i], "-r") == 0) {
+            run = true;
         }
     }
 
@@ -67,24 +71,31 @@ int main(int argc, char **argv) {
         //  gcc -c renderer.c -o renderer.o -Iinclude -Iexternal\glfw -Iexternal\glad -Iexternal\stb
         // gcc -c external/glad/glad.c -o glad.o -Iinclude -Iexternal\glfw -Iexternal\glad
         //  ar rcs librender.a renderer.o glad.o 
-        nob_cmd_append(&cmd, "gcc", "-c", "renderer.c", "-o", "./../" BUILD_DIR "/renderer.o",  "-Iinclude", "-Iexternal/glfw", "-Iexternal/glad", "-Iexternal/stb");
+        nob_cmd_append(&cmd, "gcc", "-c", "-O3", "renderer.c", "-o", "./../" BUILD_DIR "/renderer.o",  "-Iinclude", "-Iexternal/glfw", "-Iexternal/glad", "-Iexternal/stb");
         if (!nob_cmd_run_sync_and_reset(&cmd)) return 1;
         // TODO: should we save it
-        nob_cmd_append(&cmd, "gcc", "-c", "external/glad/glad.c", "-o", "./../" BUILD_DIR "/glad.o", "-Iinclude", "-Iexternal/glfw", "-Iexternal/glad");
+        nob_cmd_append(&cmd, "gcc", "-c", "-O3", "external/glad/glad.c", "-o", "./../" BUILD_DIR "/glad.o", "-Iinclude", "-Iexternal/glfw", "-Iexternal/glad");
         if (!nob_cmd_run_sync_and_reset(&cmd)) return 1;
         nob_cmd_append(&cmd, "ar", "rcs", "./../" BUILD_DIR RENDERER_LIB_A, "./../" BUILD_DIR "/renderer.o", "./../" BUILD_DIR "/glad.o");
         if (!nob_cmd_run_sync_and_reset(&cmd)) return 1;
         if (!nob_set_current_dir(root_dir)) return 1;
-        
     }
     // TODO: move inside build-renderer
     if (!nob_copy_file(BUILD_DIR RENDERER_LIB_A, LIB_DIR RENDERER_LIB_A)) return 1;
 
     if (!nob_set_current_dir(root_dir)) return 1;
-    nob_cmd_append(&cmd, "go", "build", "-o", OUTPUT_EXE, "main.go");
+    // Add optimization flags for Go build: -ldflags "-s -w" strips debug info (smaller size)
+    // For speed, Go does not have direct equivalents to C's -O2/-O3, but "-trimpath" can help reproducibility
+    nob_cmd_append(&cmd, "go", "build", "-o", OUTPUT_EXE, "-ldflags=\"-s", "-w", "-extldflags=-flto\"", "-trimpath", "-buildvcs=false", "-gcflags=\"all=-B\"",  "./cmd/demo/main.go");
 
-    if (!nob_cmd_run_sync(cmd)) return 1;
-
+    if (!nob_cmd_run_sync_and_reset(&cmd)) return 1;
     nob_log(NOB_INFO, "Build completed successfully.\n");
+
+    if(run){
+        nob_cmd_append(&cmd, OUTPUT_EXE);
+        if (!nob_cmd_run_sync_and_reset(&cmd)) return 1;
+        nob_log(NOB_INFO, "Running %s...\n", OUTPUT_EXE);
+    }
+
     return 0;
 }

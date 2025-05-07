@@ -1,0 +1,1 @@
+1. 10-20secs : 220fps (BoxesOne, 800x800), 355fps (examples.BoxesNLevelComponent(2, 1, 5000), 800x800)
