@@ -130,3 +130,16 @@ func (r *renderer) calculateTextWidth(fontData *FontData, text string) float32 {
 func (r *renderer) handleEvents() {
 	C.handle_events(r.ptr)
 }
+
+func (r *renderer) getMousePos() math.Vec2f32 {
+	pos := C.get_cursor_pos(r.ptr)
+	return math.Vec2f32{X: float32(pos.x), Y: float32(pos.y)}
+}
+
+func (r *renderer) IsMousePressed(button int) bool {
+	return C.is_mouse_button_pressed(r.ptr, C.int(button)) != 0
+}
+
+func (r *renderer) IsMouseReleased(button int) bool {
+	return C.is_mouse_button_released(r.ptr, C.int(button)) != 0
+}

@@ -48,6 +48,7 @@ func main() {
 		if app == nil {
 			log.Fatalln("Failed to create app")
 		}
+		app.SetVSync(false)
 		// TODO: is it needed?
 		defer app.Destroy()
 
@@ -62,13 +63,13 @@ func main() {
 				AddChildren( // Add all children at once
 					// tabs,
 					// examples.ChessboardComponent(app),
-					// examples.BuyNowCardComponent(app),
+					examples.BuyNowCardComponent(app),
 					// examples.NestedContainersComponent(app),
 					// examples.ExampleMarginPaddingBorder(app),
-					examples.ClayDemoComponent(app),
+					// examples.ClayDemoComponent(app),
 					// examples.BoxesOneComponent(app),
 					// examples.BoxesNLevelComponent(app, 3, 2, 100),
-					// examples.FPSCounterComponent(app),
+					examples.FPSCounterComponent(app),
 				).
 				SetMargin(math.Vec2f32{X: 3, Y: 3}).
 				SetPadding(math.Vec2f32{X: 4, Y: 4})

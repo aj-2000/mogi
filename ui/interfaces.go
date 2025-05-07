@@ -26,7 +26,7 @@ type IComponent interface {
 	Children() []IComponent
 	FlexItem() *FlexItemProps
 	Display() Display
-	IsPointInComponent(point math.Vec2f32) bool
+	IsPointInsideComponent(point math.Vec2f32) bool
 
 	// --- Internal Setters (used by layout engine) ---
 	// These need to be part of the interface if the layout engine

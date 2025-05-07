@@ -22,6 +22,7 @@ type App struct {
 	deltaTime     float32
 	lastFrameTime float32
 	fps           float32
+	le            *ui.LayoutEngine
 }
 
 func (app *App) Container() *ui.Container {
@@ -45,13 +46,9 @@ func (app *App) Run(f func(app *App) ui.IComponent) {
 		log.Fatalln("Renderer is not initialized")
 	}
 	// Define these outside the closure to persist state across frames
-	le := ui.NewLayoutEngine(func(s string, fontSize float32) float32 {
-		font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
-		return app.CalculateTextWidth(font, s)
-	})
-
+	// TODO: optimize fps calculation
 	for !app.renderer.windowShouldClose() {
-		le.BeginLayout()
+		app.le.BeginLayout()
 		windowSize := app.GetWindowSize()
 
 		current_time := app.renderer.getTime()
@@ -65,14 +62,18 @@ func (app *App) Run(f func(app *App) ui.IComponent) {
 		root := f(app)
 		componentRenderer := &ComponentRenderer{Component: root}
 
-		le.Layout(root, math.Vec2f32{}, windowSize)
-		// HandleOnClicks(app, root)
+		app.le.Layout(root, math.Vec2f32{}, windowSize)
+
+		app.le.CopyStateToComponentsRecursive(root)
+		// Logic that requires state from the previous frame
+		HandleOnClicks(app, root)
+		app.le.CopyStateFromComponentsRecursive(root)
 
 		app.renderer.clear()
 		componentRenderer.Render(app)
 		app.renderer.present()
 		app.renderer.handleEvents()
-		le.EndLayout()
+		app.le.EndLayout()
 	}
 }
 
@@ -122,7 +123,13 @@ func (app *App) LoadFont(path string, size float32) (*FontData, error) {
 
 func NewApp(width, height int, title string) *App {
 	runtime.LockOSThread()
-	app := &App{
+	// TODO: make it cleaner
+	var app *App
+	app = &App{
+		le: ui.NewLayoutEngine(func(s string, fontSize float32) float32 {
+			font, _ := app.LoadFont("JetBrainsMonoNL-Regular.ttf", fontSize)
+			return app.CalculateTextWidth(font, s)
+		}),
 		renderer: newRenderer(width, height, title),
 	}
 	app.SetVSync(true)
@@ -133,45 +140,45 @@ type ComponentRenderer struct {
 	Component ui.IComponent
 }
 
-// func HandleOnClicks(app *App, component IComponent) {
-// 	if component == nil || component.Display() == DisplayNone {
-// 		return
-// 	}
+func HandleOnClicks(app *App, component ui.IComponent) {
+	if component == nil || component.Display() == ui.DisplayNone {
+		return
+	}
 
-// 	// Get cursor state once per component
-// 	cursor := C.get_cursor_pos(app.renderer)
-// 	cPos := Vec2{X: float32(cursor.x), Y: float32(cursor.y)}
-// 	mouseDown := C.is_mouse_button_pressed(app.renderer, 0) != 0      // held this frame
-// 	mouseReleased := C.is_mouse_button_released(app.renderer, 0) != 0 // just went up this frame
+	// Get cursor state once per component
+	// TODO: move it to wrapper?
+	cursorPos := app.renderer.getMousePos()
+	mouseDown := app.renderer.IsMousePressed(0)      // held this frame
+	mouseReleased := app.renderer.IsMouseReleased(0) // just went up this frame
 
-// 	// If this is a Button, handle its pressed/released logic
-// 	if btn, ok := component.(*Button); ok {
-// 		over := btn.IsPointInComponent(cPos)
-// 		btn.MouseOver = over
+	// If this is a Button, handle its pressed/released logic
+	if btn, ok := component.(*ui.Button); ok {
+		over := btn.IsPointInsideComponent(cursorPos)
+		btn.IsMouseOver = over
 
-// 		// 1) if the cursor goes down inside the button, mark it pressed
-// 		if over && mouseDown {
-// 			btn.Pressed = true
-// 		}
+		// 1) if the cursor goes down inside the button, mark it pressed
+		if over && mouseDown {
+			btn.IsPressed = true
+		}
 
-// 		if btn.Pressed && !over {
-// 			btn.Pressed = false // reset your state
-// 		}
+		if btn.IsPressed && !over {
+			btn.IsPressed = false // reset your state
+		}
 
-// 		// 2) if it was pressed and now you see the release, fire **once**:
-// 		if btn.Pressed && mouseReleased {
-// 			btn.Pressed = false // reset your state
-// 			if btn.Callback != nil {
-// 				btn.Callback(btn)
-// 			}
-// 		}
-// 	}
+		// 2) if it was pressed and now you see the release, fire **once**:
+		if btn.IsPressed && mouseReleased {
+			btn.IsPressed = false // reset your state
+			if btn.Callback != nil {
+				btn.Callback(btn)
+			}
+		}
+	}
 
-// 	// recurse into children
-// 	for _, child := range component.Children() {
-// 		HandleOnClicks(app, child)
-// 	}
-// }
+	// recurse into children
+	for _, child := range component.Children() {
+		HandleOnClicks(app, child)
+	}
+}
 
 func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or RendererPtr directly
 	if cr.Component == nil || cr.Component.Display() == ui.DisplayNone {

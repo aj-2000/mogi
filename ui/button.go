@@ -16,6 +16,8 @@ type Button struct {
 	HoverColor   color.RGBA
 	PressedColor color.RGBA
 	TextColor    color.RGBA
+	IsPressed    bool
+	IsMouseOver  bool
 }
 
 func NewButton(label string) *Button {

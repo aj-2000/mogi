@@ -13,23 +13,115 @@ type LayoutEngine struct {
 }
 
 type ComponentState struct {
+	IsMouseOver bool
+	IsPressed   bool
 }
 
 func (le *LayoutEngine) BeginLayout() {
 	le.alive = make(map[string]bool, len(le.state))
 	le.count = make(map[string]int)
+
 	// TODO: mark active components as alive
 	// TODO: mark inactive components as not alive
 	// TODO: show warning if duplicate IDs are found
-
 }
 
 // Prune at the end of each frame:
 func (le *LayoutEngine) EndLayout() {
-	for id := range le.state {
-		if !le.alive[id] {
-			delete(le.state, id)
-		}
+	// for id := range le.state {
+	// 	if !le.alive[id] {
+	// 		delete(le.state, id)
+	// 	}
+	// }
+
+}
+
+func (le *LayoutEngine) CopyStateToComponentsRecursive(comp IComponent) {
+	if comp == nil {
+		return
+	}
+
+	if comp.Display() == DisplayNone {
+		return
+	}
+
+	fullID := comp.FullID()
+
+	state, ok := le.state[fullID]
+	if !ok {
+		state = ComponentState{}
+		le.state[fullID] = state
+	}
+
+	switch c := comp.(type) {
+	case *Container:
+		// Container doesn't have mouse state, but we need to sync its children.
+	case *Text:
+		// Text doesn't have mouse state, but we need to sync its children.
+	case *Button:
+		c.IsMouseOver = state.IsMouseOver
+		c.IsPressed = state.IsPressed
+	case *Image:
+		// Image doesn't have mouse state, but we need to sync its children.
+	default:
+		// Handle other component types if needed.
+	}
+
+	for _, child := range comp.Children() {
+		le.CopyStateToComponentsRecursive(child)
+	}
+}
+
+func (le *LayoutEngine) CopyStateFromComponentsRecursive(comp IComponent) {
+	if comp == nil {
+		return
+	}
+
+	if comp.Display() == DisplayNone {
+		return
+	}
+
+	fullID := comp.FullID()
+	if _, ok := le.state[fullID]; !ok {
+		le.state[fullID] = ComponentState{}
+	}
+
+	var isMouseOver, isPressed bool
+
+	// For now, set to false as a placeholder.
+	isMouseOver = false
+	isPressed = false
+
+	switch c := comp.(type) {
+	case *Container:
+		// Container doesn't have mouse state, but we need to sync its children.
+		// isMouseOver = false // Containers don't have mouse state
+		// isPressed = false   // Containers don't have mouse state
+	case *Text:
+		// Text doesn't have mouse state, but we need to sync its children.
+		// isMouseOver = false // Text doesn't have mouse state
+		// isPressed = false   // Text doesn't have mouse state
+	case *Button:
+		// Button has mouse state, so we can use its methods to get the state.
+		isMouseOver = c.IsMouseOver
+		isPressed = c.IsPressed
+	case *Image:
+		// Image doesn't have mouse state, but we need to sync its children.
+		// isMouseOver = false // Images don't have mouse state
+		// isPressed = false   // Images don't have mouse state
+	default:
+		// Handle other component types if needed.
+		// isMouseOver = false // Default to false for unsupported types
+		// isPressed = false   // Default to false for unsupported types
+	}
+
+	le.state[fullID] = ComponentState{
+		IsMouseOver: isMouseOver,
+		IsPressed:   isPressed,
+	}
+
+	for _, child := range comp.Children() {
+		le.CopyStateFromComponentsRecursive(child)
 	}
 }
 

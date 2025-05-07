@@ -81,7 +81,7 @@ func (c *Component) AbsolutePos() math.Vec2f32 {
 	}
 	return c.pos.Vec2f32()
 }
-func (c *Component) IsPointInComponent(point math.Vec2f32) bool {
+func (c *Component) IsPointInsideComponent(point math.Vec2f32) bool {
 	absPos := c.AbsolutePos()
 	return point.X >= absPos.X && point.X <= absPos.X+c.size.X &&
 		point.Y >= absPos.Y && point.Y <= absPos.Y+c.size.Y

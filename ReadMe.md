@@ -48,6 +48,8 @@ TODO: (Optionally, but recommended) Update the C Renderer struct to cache curren
 19. renderer interface
 20. respect root container margin
 21. src folder
+22. button enums
+23. cache mouse position etc for a frame
 // TODO: Benchmarking
 // TODO: SIMD implementations
 // TODO: bezier curves
