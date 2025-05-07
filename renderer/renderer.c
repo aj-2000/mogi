@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdarg.h> // Needed for va_list in dprintf
 
-#include "renderer.h"
+#include "include/renderer.h"
 
 #include "external/glad/glad.h"  // Include GLAD for OpenGL function loading
 #include "external/glfw/glfw3.h" // Include GLFW for window management

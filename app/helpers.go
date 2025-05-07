@@ -5,7 +5,7 @@ package app
 #include "../renderer/include/renderer.h"
 */
 import "C"
-import "mogi/color"
+import "github.com/aj-2000/mogi/color"
 
 func goColorToCColorRGBA(c color.RGBA) C.ColorRGBA {
 	return C.ColorRGBA{

@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
     if (!nob_set_current_dir(root_dir)) return 1;
     // Add optimization flags for Go build: -ldflags "-s -w" strips debug info (smaller size)
     // For speed, Go does not have direct equivalents to C's -O2/-O3, but "-trimpath" can help reproducibility
-    nob_cmd_append(&cmd, "go", "build", "-o", OUTPUT_EXE, "-ldflags=\"-s", "-w", "-extldflags=-flto\"", "-trimpath", "-buildvcs=false", "-gcflags=\"all=-B\"",  "main.go");
+    nob_cmd_append(&cmd, "go", "build", "-o", OUTPUT_EXE, "-ldflags=\"-s", "-w", "-extldflags=-flto\"", "-trimpath", "-buildvcs=false", "-gcflags=\"all=-B\"",  "./cmd/demo/main.go");
 
     if (!nob_cmd_run_sync_and_reset(&cmd)) return 1;
     nob_log(NOB_INFO, "Build completed successfully.\n");

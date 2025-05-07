@@ -10,8 +10,8 @@ import (
 	"log"
 	"unsafe"
 
-	"mogi/color"
-	"mogi/math"
+	"github.com/aj-2000/mogi/color"
+	"github.com/aj-2000/mogi/math"
 )
 
 type renderer struct {

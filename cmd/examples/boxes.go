@@ -2,11 +2,12 @@ package examples
 
 import (
 	"math/rand"
-	mogiApp "mogi/app"
-	"mogi/color"
-	"mogi/math"
-	"mogi/ui"
 	"strconv"
+
+	mogiApp "github.com/aj-2000/mogi/app"
+	"github.com/aj-2000/mogi/color"
+	"github.com/aj-2000/mogi/math"
+	"github.com/aj-2000/mogi/ui"
 )
 
 func randomColor() color.RGBA {

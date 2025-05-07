@@ -9,10 +9,11 @@ import "C"
 import (
 	"fmt"
 	"log"
-	"mogi/math"
-	"mogi/ui"
 	"runtime"
 	"unsafe"
+
+	"github.com/aj-2000/mogi/math"
+	"github.com/aj-2000/mogi/ui"
 )
 
 type App struct {
@@ -203,11 +204,11 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 	case *ui.Button:
 		textHeight := float32(24.0) // Rough estimate!
 
-		// if comp.Pressed {
-		// 	bgColor = comp.PressedColor
-		// } else if comp.MouseOver {
-		// 	bgColor = comp.HoverColor
-		// }
+		if comp.IsPressed {
+			backgroundColor = comp.PressedColor
+		} else if comp.IsMouseOver {
+			backgroundColor = comp.HoverColor
+		}
 		app.renderer.drawRectangle(pos, size, backgroundColor, borderWidth, comp.BorderColor(), borderRadius)
 		// TODO: fontsize
 		// TODO: text centering

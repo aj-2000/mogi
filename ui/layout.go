@@ -2,7 +2,8 @@ package ui
 
 import (
 	"fmt"
-	"mogi/math"
+
+	"github.com/aj-2000/mogi/math"
 )
 
 type LayoutEngine struct {

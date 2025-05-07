@@ -2,15 +2,16 @@ package main
 
 import (
 	"log"
-	mogiApp "mogi/app"
-	"mogi/color"
-	"mogi/examples"
-	"mogi/math"
-	"mogi/ui"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"sync"
+
+	mogiApp "github.com/aj-2000/mogi/app"
+	"github.com/aj-2000/mogi/cmd/examples"
+	"github.com/aj-2000/mogi/color"
+	"github.com/aj-2000/mogi/math"
+	"github.com/aj-2000/mogi/ui"
 )
 
 func main() {

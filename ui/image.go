@@ -1,6 +1,6 @@
 package ui
 
-import "mogi/math"
+import "github.com/aj-2000/mogi/math"
 
 // ——————————————————————————————————————————————————————————————————————————————
 // Image

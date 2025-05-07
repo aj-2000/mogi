@@ -1,10 +1,10 @@
 package examples
 
 import (
-	mogiApp "mogi/app"
-	"mogi/color"
-	"mogi/math"
-	"mogi/ui"
+	mogiApp "github.com/aj-2000/mogi/app"
+	"github.com/aj-2000/mogi/color"
+	"github.com/aj-2000/mogi/math"
+	"github.com/aj-2000/mogi/ui"
 )
 
 // TODO: should we receive Vec2f32 or (x, y) as parameters?
