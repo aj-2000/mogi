@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"unsafe"
 
+	"github.com/aj-2000/mogi/internal/ui"
 	"github.com/aj-2000/mogi/math"
-	"github.com/aj-2000/mogi/ui"
 )
 
 type App struct {

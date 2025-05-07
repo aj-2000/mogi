@@ -10,8 +10,8 @@ import (
 	mogiApp "github.com/aj-2000/mogi/app"
 	"github.com/aj-2000/mogi/cmd/examples"
 	"github.com/aj-2000/mogi/color"
+	"github.com/aj-2000/mogi/internal/ui"
 	"github.com/aj-2000/mogi/math"
-	"github.com/aj-2000/mogi/ui"
 )
 
 func main() {
