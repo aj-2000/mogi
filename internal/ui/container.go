@@ -80,6 +80,11 @@ func (c *Container) SetGap(gap math.Vec2f32) *Container {
 	return c
 }
 
+func (c *Container) SetZIndex(zIndex int) *Container {
+	c.Component.setZIndex(zIndex)
+	return c
+}
+
 // --- Fluent Setters for Container Flex Item Properties ---
 // These allow a Container to act as a flex item within another container
 

@@ -97,3 +97,8 @@ func (t *Text) SetOrder(order int) *Text {
 	t.Component.SetOrder(order)
 	return t
 }
+
+func (t *Text) SetZIndex(zIndex int) *Text {
+	t.Component.setZIndex(zIndex)
+	return t
+}

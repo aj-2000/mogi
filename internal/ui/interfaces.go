@@ -22,11 +22,13 @@ type IComponent interface {
 	SetParent(p IComponent)
 
 	AbsolutePos() math.Vec2f32
+	AbsoluteZIndex() int
 	Parent() IComponent
 	Children() []IComponent
 	FlexItem() *FlexItemProps
 	Display() Display
 	IsPointInsideComponent(point math.Vec2f32) bool
+	ZIndex() int
 
 	// --- Internal Setters (used by layout engine) ---
 	// These need to be part of the interface if the layout engine
@@ -44,6 +46,7 @@ type IComponent interface {
 	setPadding(padding math.Vec2f32)
 	setID(id string)
 	setFullID(fullID string)
+	setZIndex(zIndex int)
 	// Optional: Method to get intrinsic size (needed for flex-basis: auto)
 	// CalculateIntrinsicSize(available math.Vec2f32 ) math.Vec2f32
 }

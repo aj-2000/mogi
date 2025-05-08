@@ -10,7 +10,10 @@ import (
 	"fmt"
 	"log"
 	"runtime"
+	"sort"
 	"unsafe"
+
+	"github.com/aj-2000/mogi/color"
 
 	"github.com/aj-2000/mogi/internal/ui"
 	"github.com/aj-2000/mogi/math"
@@ -184,9 +187,39 @@ func HandleOnClicks(app *App, component ui.IComponent) {
 	}
 }
 
-func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or RendererPtr directly
+type RenderCommandKind int
+
+const (
+	RenderCommandNone RenderCommandKind = iota
+	RenderCommandDrawRectangle
+	RenderCommandDrawText
+	RenderCommandDrawTexture
+)
+
+type RenderCommand struct {
+	Kind            RenderCommandKind
+	Pos             math.Vec2f32
+	Size            math.Vec2f32
+	Color           color.RGBA
+	Font            *C.FontData
+	Text            string
+	BorderWidth     math.Vec2f32
+	BorderColor     color.RGBA
+	BorderRadius    float32
+	BackgroundColor color.RGBA
+	ZIndex          int
+	HoverColor      color.RGBA
+	PressedColor    color.RGBA
+	FontSize        float32
+	Path            string
+	Display         ui.Display
+}
+
+type RenderCommandArray = []RenderCommand
+
+func (cr *ComponentRenderer) GenerateRenderCommands(app *App) RenderCommandArray {
 	if cr.Component == nil || cr.Component.Display() == ui.DisplayNone {
-		return
+		return nil
 	}
 
 	pos := cr.Component.AbsolutePos()
@@ -196,51 +229,125 @@ func (cr *ComponentRenderer) Render(app *App) { // Pass your App struct or Rende
 	borderRadius := cr.Component.BorderRadius()
 	borderColor := cr.Component.BorderColor()
 	backgroundColor := cr.Component.BackgroundColor()
+	zIndex := cr.Component.AbsoluteZIndex()
+	var commands RenderCommandArray
 
-	switch comp := cr.Component.(type) { // Type switch is often cleaner
+	switch comp := cr.Component.(type) {
 	case *ui.Container:
-		app.renderer.drawRectangle(pos, size, backgroundColor, borderWidth, borderColor, borderRadius)
+		commands = append(commands, RenderCommand{
+			Kind:            RenderCommandDrawRectangle,
+			Pos:             pos,
+			Size:            size,
+			Color:           backgroundColor,
+			BorderWidth:     borderWidth,
+			BorderColor:     borderColor,
+			BorderRadius:    borderRadius,
+			ZIndex:          zIndex,
+			Display:         comp.Display(),
+			BackgroundColor: backgroundColor,
+		})
 
 	case *ui.Text:
-		app.renderer.drawText("JetBrainsMonoNL-Regular.ttf", comp.FontSize, comp.Content, pos, comp.Color)
+		commands = append(commands, RenderCommand{
+			Kind:     RenderCommandDrawText,
+			Text:     comp.Content,
+			Color:    comp.Color,
+			Pos:      pos,
+			Display:  comp.Display(),
+			FontSize: comp.FontSize,
+			ZIndex:   zIndex})
 
 	case *ui.Button:
-		textHeight := float32(24.0) // Rough estimate!
-
 		if comp.IsPressed {
 			backgroundColor = comp.PressedColor
 		} else if comp.IsMouseOver {
 			backgroundColor = comp.HoverColor
 		}
-		app.renderer.drawRectangle(pos, size, backgroundColor, borderWidth, comp.BorderColor(), borderRadius)
-		// TODO: fontsize
-		// TODO: text centering
-		// TODO: fallback font?
-		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0) // Use a reasonable default or button specific size
+		buttonCommand := RenderCommand{
+			Kind:            RenderCommandDrawRectangle,
+			Color:           backgroundColor,
+			ZIndex:          zIndex,
+			Text:            "",
+			Pos:             pos,
+			Size:            size,
+			HoverColor:      comp.HoverColor,
+			PressedColor:    comp.PressedColor,
+			BorderWidth:     borderWidth,
+			BorderColor:     borderColor,
+			Display:         comp.Display(),
+			BorderRadius:    borderRadius,
+			BackgroundColor: backgroundColor,
+		}
+		commands = append(commands, buttonCommand)
+		font, err := app.LoadFont("JetBrainsMonoNL-Regular.ttf", comp.FontSize())
 		if err != nil {
 			log.Printf("Failed to load font during render: %v", err)
-			return
+			return nil
 		}
 		textWidth := app.renderer.calculateTextWidth(font, comp.Label)
-		offset := size.Sub(*math.NewVec2f32(textWidth, textHeight)).Scale(0.5)
-		textPos := pos.Add(*offset)
-
-		app.renderer.drawText("JetBrainsMonoNL-Regular.ttf", textHeight, comp.Label, *textPos, comp.TextColor)
+		offset := size.Sub(*math.NewVec2f32(textWidth, comp.FontSize())).Scale(0.5)
+		textPos := *pos.Add(*offset)
+		commands = append(commands, RenderCommand{
+			Kind:     RenderCommandDrawText,
+			Text:     comp.Label,
+			Color:    comp.TextColor,
+			Pos:      textPos,
+			Display:  comp.Display(),
+			FontSize: comp.FontSize(),
+			ZIndex:   zIndex + 1})
 
 	case *ui.Image:
-		// TODO: how to expose Gluint to Go? or use C directly?
-		textureID, err := app.renderer.textureManager.load(comp.Path)
-		if err != nil {
-			log.Printf("Failed to load texture: %v", err)
-			return
+
+		imageCommand := RenderCommand{
+			Kind:    RenderCommandDrawTexture,
+			Path:    comp.Path,
+			Pos:     pos,
+			Display: comp.Display(),
+			Size:    size,
+			ZIndex:  zIndex,
 		}
-		app.renderer.drawTexture(textureID, pos, size)
+		commands = append(commands, imageCommand)
 	}
 
 	for _, child := range cr.Component.Children() {
-		childRenderer := &ComponentRenderer{
-			Component: child,
+		childRenderer := &ComponentRenderer{Component: child}
+		childCommands := childRenderer.GenerateRenderCommands(app)
+		commands = append(commands, childCommands...)
+	}
+
+	return commands
+}
+
+func (cr *ComponentRenderer) Render(app *App) {
+	commands := cr.GenerateRenderCommands(app)
+	// Sort commands by ZIndex
+	sort.Slice(commands, func(i, j int) bool {
+		return commands[i].ZIndex < commands[j].ZIndex
+	})
+	for _, command := range commands {
+		if command.Display == ui.DisplayNone {
+			continue
 		}
-		childRenderer.Render(app)
+		switch command.Kind {
+		case RenderCommandDrawRectangle:
+			app.renderer.drawRectangle(command.Pos, command.Size, command.BackgroundColor, command.BorderWidth, command.BorderColor, command.BorderRadius)
+
+		case RenderCommandDrawText:
+			app.renderer.drawText("JetBrainsMonoNL-Regular.ttf", command.FontSize, command.Text, command.Pos, command.Color)
+
+		case RenderCommandDrawTexture:
+			if command.Path == "" {
+				log.Println("Texture path is empty, skipping texture render")
+				continue
+			}
+			textureID, err := app.renderer.textureManager.load(command.Path)
+			if err != nil {
+				log.Printf("Failed to load texture: %v", err)
+				return
+			}
+			app.renderer.drawTexture(textureID, command.Pos, command.Size)
+		default:
+			log.Printf("Unknown render command kind: %v", command.Kind)
+		}
 	}
 }

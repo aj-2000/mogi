@@ -195,15 +195,16 @@ func (le *LayoutEngine) AssignIDsRecursive(comp IComponent) {
 
 // printComponentTree is a helper for debugging the layout structure.
 func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
+	if comp.Display() == DisplayNone {
+		return // Skip if component is not displayed.
+	}
 	displayStr := comp.ID()
 
-	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Padding:%.1f,%.1f Margin:%.1f,%.1f Gap:%.1f,%.1f Border:%.1f,%.1f]\n",
+	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Z:%d]\n",
 		indent, displayStr, comp.Size().X, comp.Size().Y,
 		comp.Pos().X, comp.Pos().Y, comp.Pos().Type,
-		comp.Padding().X, comp.Padding().Y,
-		comp.Margin().X, comp.Margin().Y,
-		comp.Gap().X, comp.Gap().Y,
-		comp.Border().X, comp.Border().Y)
+		comp.AbsoluteZIndex(),
+	)
 	children := comp.Children()
 	if len(children) > 0 {
 		// fmt.Printf("%s  Children:\n", indent)

@@ -58,7 +58,6 @@ func main() {
 		flag := false
 
 		app.Run(func(app *mogiApp.App) ui.IComponent {
-			windowSize := app.GetWindowSize()
 			children := []ui.IComponent{
 				examples.ChessboardComponent(app),
 				examples.BuyNowCardComponent(app),
@@ -100,13 +99,11 @@ func main() {
 				SetID("tabs").
 				SetBackgroundColor(color.Magenta).
 				SetBorderRadius(5).
+				SetPadding(math.Vec2f32{X: 4, Y: 4}).
 				AddChildren(
 					app.Container().
-						SetID("tabs_container").
-						SetBackgroundColor(color.Pink).
-						AddChildren(children...),
-					app.Container().
 						SetID("tab_bar").
+						SetZIndex(999).
 						SetBackgroundColor(color.Gray).
 						SetBorderRadius(5).
 						SetBorder(math.Vec2f32{X: 1, Y: 1}).
@@ -115,7 +112,6 @@ func main() {
 						SetGap(math.Vec2f32{X: 3, Y: 3}).
 						SetMargin(math.Vec2f32{X: 3, Y: 3}).
 						SetDisplay(ui.DisplayBlock).
-						SetPosition(ui.Position{X: 10, Y: windowSize.Y - 80, Type: ui.PositionTypeAbsolute}).
 						AddChildren(
 							app.Button("Chessboard").
 								SetDisplay(ui.DisplayInline).
@@ -154,9 +150,13 @@ func main() {
 									setTabIndex(4)
 								}),
 						),
+					app.Container().
+						SetID("tabs_container").
+						SetBackgroundColor(color.Pink).
+						AddChildren(children...),
 				)
 
-			bgColor := color.Yellow
+			bgColor := color.Transparent
 			r := app.Container().
 				SetID("app_container").
 				SetBackgroundColor(bgColor).
@@ -174,7 +174,6 @@ func main() {
 	wg.Wait()
 }
 
-// Z-Index
 // TakeFullWidth
 // TakeFullHeight
 // LinuxVM

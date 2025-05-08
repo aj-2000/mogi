@@ -28,6 +28,7 @@ type Component struct {
 	borderColor     color.RGBA
 	backgroundColor color.RGBA
 	flexItemProps   FlexItemProps
+	zIndex          int
 }
 
 func newComponentBase(kind ComponentKind) Component {
@@ -63,6 +64,7 @@ func (c *Component) Size() math.Vec2f32     { return c.size }
 func (c *Component) FullID() string         { return c.fullID }
 func (c *Component) ID() string             { return c.id }
 func (c *Component) Children() []IComponent { return c.children }
+func (c *Component) ZIndex() int            { return c.zIndex }
 
 // should we return a copy?
 func (c *Component) FlexItem() *FlexItemProps    { return &c.flexItemProps }
@@ -72,7 +74,12 @@ func (c *Component) Border() math.Vec2f32        { return c.border }
 func (c *Component) Gap() math.Vec2f32           { return c.gap }
 func (c *Component) BorderColor() color.RGBA     { return c.borderColor }
 func (c *Component) BackgroundColor() color.RGBA { return c.backgroundColor }
+
+// TODO : optimize recursion in AbsolutePos and AbsoluteZIndex
 func (c *Component) AbsolutePos() math.Vec2f32 {
+	if c.pos.Type == PositionTypeAbsolute {
+		return c.pos.Vec2f32()
+	}
 	if c.parent != nil {
 		return math.Vec2f32{
 			X: c.pos.X + c.parent.AbsolutePos().X,
@@ -80,6 +87,15 @@ func (c *Component) AbsolutePos() math.Vec2f32 {
 		}
 	}
 	return c.pos.Vec2f32()
+}
+func (c *Component) AbsoluteZIndex() int {
+	if c.pos.Type == PositionTypeAbsolute {
+		return c.zIndex
+	}
+	if c.parent != nil {
+		return c.zIndex + c.parent.AbsoluteZIndex() + 1
+	}
+	return c.zIndex
 }
 func (c *Component) IsPointInsideComponent(point math.Vec2f32) bool {
 	absPos := c.AbsolutePos()
@@ -126,6 +142,9 @@ func (c *Component) setFullID(fullID string) {
 }
 func (c *Component) setBackgroundColor(color color.Color) {
 	c.backgroundColor = color.ToRGBA()
+}
+func (c *Component) setZIndex(zIndex int) {
+	c.zIndex = zIndex
 }
 
 // ——————————————————————————————————————————————————————————————————————————————

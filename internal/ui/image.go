@@ -42,3 +42,8 @@ func (i *Image) SetSize(size math.Vec2f32) *Image {
 	i.Component.setSize(size)
 	return i
 }
+
+func (i *Image) SetZIndex(zIndex int) *Image {
+	i.Component.setZIndex(zIndex)
+	return i
+}

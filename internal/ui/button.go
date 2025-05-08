@@ -87,6 +87,11 @@ func (b *Button) SetSize(size math.Vec2f32) *Button {
 	return b
 }
 
+func (b *Button) SetZIndex(zIndex int) *Button {
+	b.Component.setZIndex(zIndex)
+	return b
+}
+
 func (b *Button) FontSize() float32 {
 	return 24.0
 }

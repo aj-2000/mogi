@@ -25,5 +25,6 @@ func FPSCounterComponent(app *mogiApp.App) ui.IComponent {
 		SetPadding(math.Vec2f32{X: 5, Y: 5}).
 		SetBorderRadius(5).
 		AddChild(fpsText).
+		SetZIndex(10000).
 		SetPosition(ui.Position{X: windowSize.X - 120, Y: 20, Type: ui.PositionTypeAbsolute})
 }
