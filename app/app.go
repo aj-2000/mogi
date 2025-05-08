@@ -61,11 +61,14 @@ func (app *App) Run(f func(app *App) ui.IComponent) {
 		app.totalTime += float64(app.deltaTime)
 		app.totalFrames++
 		root := f(app)
+
 		componentRenderer := &ComponentRenderer{Component: root}
-
+		app.le.AssignIDsRecursive(root)
+		if app.totalFrames != 1 {
+			// should not run on the first frame
+			app.le.CopyStateToComponentsRecursive(root)
+		}
 		app.le.Layout(root, math.Vec2f32{}, windowSize)
-
-		app.le.CopyStateToComponentsRecursive(root)
 		// Logic that requires state from the previous frame
 		HandleOnClicks(app, root)
 		app.le.CopyStateFromComponentsRecursive(root)

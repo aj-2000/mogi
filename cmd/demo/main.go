@@ -55,21 +55,113 @@ func main() {
 
 		app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 		// TODO: fix app is not a type issue
+		flag := false
+
 		app.Run(func(app *mogiApp.App) ui.IComponent {
+			windowSize := app.GetWindowSize()
+			children := []ui.IComponent{
+				examples.ChessboardComponent(app),
+				examples.BuyNowCardComponent(app),
+				examples.BoxesOneComponent(app),
+				// examples.BoxesNLevelComponent(app, 3, 3, 100),
+				examples.NestedContainersComponent(app),
+				// examples.ClayDemoComponent(app),
+				examples.ExampleMarginPaddingBorder(app),
+			}
+
+			setTabIndex := func(index int) {
+				for i, comp := range children {
+					display := ui.DisplayNone
+					if i == index {
+						display = ui.DisplayBlock
+					}
+					switch c := comp.(type) {
+					case *ui.Button:
+						c.SetDisplay(display)
+					case *ui.Text:
+						c.SetDisplay(display)
+					case *ui.Image:
+						c.SetDisplay(display)
+					case *ui.Container:
+						c.SetDisplay(display)
+					default:
+						log.Printf("Unknown component type: %T", c)
+
+					}
+
+				}
+			}
+			if !flag {
+				setTabIndex(0)
+				flag = true
+			}
+
+			tabs := app.Container().
+				SetID("tabs").
+				SetBackgroundColor(color.Magenta).
+				SetBorderRadius(5).
+				AddChildren(
+					app.Container().
+						SetID("tabs_container").
+						SetBackgroundColor(color.Pink).
+						AddChildren(children...),
+					app.Container().
+						SetID("tab_bar").
+						SetBackgroundColor(color.Gray).
+						SetBorderRadius(5).
+						SetBorder(math.Vec2f32{X: 1, Y: 1}).
+						SetBorderColor(color.Black).
+						SetPadding(math.Vec2f32{X: 4, Y: 4}).
+						SetGap(math.Vec2f32{X: 3, Y: 3}).
+						SetMargin(math.Vec2f32{X: 3, Y: 3}).
+						SetDisplay(ui.DisplayBlock).
+						SetPosition(ui.Position{X: 10, Y: windowSize.Y - 80, Type: ui.PositionTypeAbsolute}).
+						AddChildren(
+							app.Button("Chessboard").
+								SetDisplay(ui.DisplayInline).
+								SetOnClick(func(self *ui.Button) {
+									setTabIndex(0)
+								}),
+							app.Button("Buy Now").
+								SetDisplay(ui.DisplayInline).
+								SetOnClick(func(self *ui.Button) {
+									setTabIndex(1)
+									log.Println("Buy Now clicked")
+								}),
+							app.Button("Boxes One").
+								SetDisplay(ui.DisplayInline).
+								SetOnClick(func(self *ui.Button) {
+									setTabIndex(2)
+								}),
+							// app.Button("Boxes N Level").
+							// 	SetDisplay(ui.DisplayInline).
+							// 	SetOnClick(func(self *ui.Button) {
+							// 		setTabIndex(3)
+							// 	}),
+							app.Button("Nested Containers").
+								SetDisplay(ui.DisplayInline).
+								SetOnClick(func(self *ui.Button) {
+									setTabIndex(3)
+								}),
+							// app.Button("Clay Demo").
+							// 	SetDisplay(ui.DisplayInline).
+							// 	SetOnClick(func(self *ui.Button) {
+							// 		setTabIndex(5)
+							// 	}),
+							app.Button("Margin Padding Border").
+								SetDisplay(ui.DisplayInline).
+								SetOnClick(func(self *ui.Button) {
+									setTabIndex(4)
+								}),
+						),
+				)
 
 			bgColor := color.Yellow
 			r := app.Container().
 				SetID("app_container").
 				SetBackgroundColor(bgColor).
 				AddChildren( // Add all children at once
-					// tabs,
-					// examples.ChessboardComponent(app),
-					examples.BuyNowCardComponent(app),
-					// examples.NestedContainersComponent(app),
-					// examples.ExampleMarginPaddingBorder(app),
-					// examples.ClayDemoComponent(app),
-					// examples.BoxesOneComponent(app),
-					// examples.BoxesNLevelComponent(app, 3, 2, 100),
+					tabs,
 					examples.FPSCounterComponent(app),
 				).
 				SetMargin(math.Vec2f32{X: 3, Y: 3}).
@@ -81,3 +173,8 @@ func main() {
 	// should i rename Vec2f32 to Vec2 and Vec2 to Vec2f64?
 	wg.Wait()
 }
+
+// Z-Index
+// TakeFullWidth
+// TakeFullHeight
+// LinuxVM

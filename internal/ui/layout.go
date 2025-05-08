@@ -16,6 +16,7 @@ type LayoutEngine struct {
 type ComponentState struct {
 	IsMouseOver bool
 	IsPressed   bool
+	Display     Display
 }
 
 func (le *LayoutEngine) BeginLayout() {
@@ -42,10 +43,6 @@ func (le *LayoutEngine) CopyStateToComponentsRecursive(comp IComponent) {
 		return
 	}
 
-	if comp.Display() == DisplayNone {
-		return
-	}
-
 	fullID := comp.FullID()
 
 	state, ok := le.state[fullID]
@@ -53,6 +50,8 @@ func (le *LayoutEngine) CopyStateToComponentsRecursive(comp IComponent) {
 		state = ComponentState{}
 		le.state[fullID] = state
 	}
+
+	comp.setDisplay(state.Display)
 
 	switch c := comp.(type) {
 	case *Container:
@@ -75,10 +74,6 @@ func (le *LayoutEngine) CopyStateToComponentsRecursive(comp IComponent) {
 
 func (le *LayoutEngine) CopyStateFromComponentsRecursive(comp IComponent) {
 	if comp == nil {
-		return
-	}
-
-	if comp.Display() == DisplayNone {
 		return
 	}
 
@@ -119,6 +114,7 @@ func (le *LayoutEngine) CopyStateFromComponentsRecursive(comp IComponent) {
 	le.state[fullID] = ComponentState{
 		IsMouseOver: isMouseOver,
 		IsPressed:   isPressed,
+		Display:     comp.Display(),
 	}
 
 	for _, child := range comp.Children() {
@@ -138,9 +134,9 @@ func NewLayoutEngine(f func(string, float32) float32) *LayoutEngine {
 func (le *LayoutEngine) Layout(root IComponent,
 	origin math.Vec2f32,
 	availableSize math.Vec2f32) {
-	// ─── PASS 0: assign a stable full‐path ID to every node ───
-	// Seed with “root” so your first widgets come out as “root/container#0(…)”
-	le.assignIDsRecursive(root)
+	// // ─── PASS 0: assign a stable full‐path ID to every node ───
+	// // Seed with “root” so your first widgets come out as “root/container#0(…)”
+	// le.assignIDsRecursive(root)
 
 	// ─── PASS 1: intrinsic size (bottom‐up) ───
 	le.calculateSizeRecursive(root, availableSize)
@@ -180,7 +176,7 @@ func (le *LayoutEngine) nextFullID(parent, widgetType, userID string) string {
 
 // assignIDsRecursive walks the tree and gives each component
 // a full‐path ID before any layout work happens.
-func (le *LayoutEngine) assignIDsRecursive(comp IComponent) {
+func (le *LayoutEngine) AssignIDsRecursive(comp IComponent) {
 	// Ask your App (or UIContext) for the new full ID:
 	//   widgetType := comp.Type() // e.g. "container", "button", "text"
 	//   userID     := comp.UserID() // whatever the caller set, or "" if none
@@ -193,16 +189,12 @@ func (le *LayoutEngine) assignIDsRecursive(comp IComponent) {
 
 	// Recurse into children
 	for _, child := range comp.Children() {
-		le.assignIDsRecursive(child)
+		le.AssignIDsRecursive(child)
 	}
 }
 
 // printComponentTree is a helper for debugging the layout structure.
 func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
-
-	if comp.Display() == DisplayNone {
-		return
-	}
 	displayStr := comp.ID()
 
 	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Padding:%.1f,%.1f Margin:%.1f,%.1f Gap:%.1f,%.1f Border:%.1f,%.1f]\n",
@@ -440,6 +432,10 @@ func (le *LayoutEngine) calculatePositionRecursive(comp IComponent, parentTopLef
 
 		// Iterate through children to position them.
 		for _, child := range c.Children() {
+			if child.Display() == DisplayNone {
+				// Skip if child is nil or marked as not displayed.
+				continue
+			}
 			childPosInfo := child.Pos()
 			childSize := child.Size()
 			childSize.X += 2 * child.Margin().X // Include margin in size for wrapping calculations
