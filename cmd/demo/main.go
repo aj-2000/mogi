@@ -56,7 +56,6 @@ func main() {
 		app.LoadFont("JetBrainsMonoNL-Regular.ttf", 24.0)
 		// TODO: fix app is not a type issue
 		flag := false
-
 		app.Run(func(app *mogiApp.App) ui.IComponent {
 			children := []ui.IComponent{
 				examples.ChessboardComponent(app),
@@ -157,12 +156,30 @@ func main() {
 				)
 
 			bgColor := color.Transparent
+			cursorSize := float32(30)
+			cursorSize1 := float32(25)
+
+			mousePos := app.GetMousePos()
 			r := app.Container().
 				SetID("app_container").
 				SetBackgroundColor(bgColor).
 				AddChildren( // Add all children at once
 					tabs,
 					examples.FPSCounterComponent(app),
+					app.Container().
+						SetID("mouse_pos").
+						SetZIndex(10001).
+						SetBackgroundColor(color.Orange).
+						SetBorderRadius(cursorSize/2).
+						SetSize(math.Vec2f32{X: cursorSize, Y: cursorSize}).
+						SetPosition(ui.Position{X: mousePos.X - (cursorSize / 2), Y: mousePos.Y - (cursorSize / 2), Type: ui.PositionTypeAbsolute}),
+					app.Container().
+						SetID("mouse_pos1").
+						SetZIndex(10001).
+						SetBackgroundColor(color.Cyan).
+						SetBorderRadius(cursorSize1/2).
+						SetSize(math.Vec2f32{X: cursorSize1, Y: cursorSize1}).
+						SetPosition(ui.Position{X: mousePos.X - (cursorSize1 / 2), Y: mousePos.Y - (cursorSize1 / 2), Type: ui.PositionTypeAbsolute}),
 				).
 				SetMargin(math.Vec2f32{X: 3, Y: 3}).
 				SetPadding(math.Vec2f32{X: 4, Y: 4})

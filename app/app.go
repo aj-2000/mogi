@@ -187,6 +187,10 @@ func HandleOnClicks(app *App, component ui.IComponent) {
 	}
 }
 
+func (app *App) GetMousePos() math.Vec2f32 {
+	return app.renderer.getMousePos()
+}
+
 type RenderCommandKind int
 
 const (

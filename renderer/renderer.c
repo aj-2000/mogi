@@ -79,6 +79,10 @@ void* create_renderer(int width, int height, const char* title) {
 
     glfwMakeContextCurrent(window);
 
+    // Disable cursor
+    printf("Hiding cursor...\n");
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); // Hide cursor
+
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
          fprintf(stderr, "ERROR: Failed to initialize GLAD\n");
          glfwDestroyWindow(window);
