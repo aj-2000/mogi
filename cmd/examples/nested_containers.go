@@ -22,6 +22,8 @@ func NestedContainersComponent(app *mogiApp.App) ui.IComponent {
 				AddChildren(
 					app.Container().
 						SetID("container_1_1").
+						SetWidthPercent(50).
+						// TODO : fix percent precedence*
 						SetBackgroundColor(color.Brown).
 						AddChildren(
 							app.Container().

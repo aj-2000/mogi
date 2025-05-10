@@ -2,7 +2,10 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
+	"github.com/aj-2000/mogi/color"
 	"github.com/aj-2000/mogi/math"
 )
 
@@ -131,6 +134,55 @@ func NewLayoutEngine(f func(string, float32) float32) *LayoutEngine {
 		state:              make(map[string]ComponentState),
 	}
 }
+
+func (le *LayoutEngine) CalculateWrappedTextSize(text string, fontSize float32, maxLineWidth float32) math.Vec2f32 {
+	// available width minus any horizontal padding/border
+
+	words := strings.Fields(text)
+	var currentLine strings.Builder
+	var lines []string
+
+	for _, w := range words {
+		testLine := currentLine.String()
+		if testLine != "" {
+			testLine += " " + w
+		} else {
+			testLine = w
+		}
+
+		wWidth := le.CalculateTextWidth(testLine, fontSize)
+		if wWidth <= maxLineWidth {
+			if currentLine.Len() > 0 {
+				currentLine.WriteString(" ")
+			}
+			currentLine.WriteString(w)
+		} else {
+			// commit current line, start new
+			lines = append(lines, currentLine.String())
+			currentLine.Reset()
+			currentLine.WriteString(w)
+		}
+	}
+	// last line
+	if currentLine.Len() > 0 {
+		lines = append(lines, currentLine.String())
+	}
+
+	// find widest line
+	var widest float32
+	for _, ln := range lines {
+		w := le.CalculateTextWidth(ln, fontSize)
+		if w > widest {
+			widest = w
+		}
+	}
+	lineHeight := fontSize
+	totalHeight := float32(len(lines)) * lineHeight
+	totalWidth := widest
+
+	return math.Vec2f32{X: totalWidth, Y: totalHeight}
+}
+
 func (le *LayoutEngine) Layout(root IComponent,
 	origin math.Vec2f32,
 	availableSize math.Vec2f32) {
@@ -145,9 +197,79 @@ func (le *LayoutEngine) Layout(root IComponent,
 	le.calculatePositionRecursive(root, origin)
 
 	// Optional debug dump
-	// fmt.Println("--- Layout Complete ---")
-	// le.printComponentTree(root, "")
-	// fmt.Println("-----------------------")
+	fmt.Println("--- Layout Complete ---")
+	le.printComponentTree(root, "")
+	fmt.Println("-----------------------")
+}
+func (le *LayoutEngine) ConvertDerivedComponentToPrimitivesRecursive(comp IComponent) IComponent {
+	if comp == nil {
+		return nil
+	}
+
+	var newChildren []IComponent
+	for _, child := range comp.Children() {
+		newChild := le.ConvertDerivedComponentToPrimitivesRecursive(child)
+		if newChild != nil {
+			newChildren = append(newChildren, newChild)
+		}
+	}
+
+	switch c := comp.(type) {
+	case *Container:
+		c.SetChildren(newChildren...)
+		return c
+	case *Text:
+		return c
+	case *Button:
+		return c
+	case *Image:
+		return c
+	case *Table:
+		// TODO: remove hardcoded values
+		headRow := NewContainer().
+			SetGap(math.Vec2f32{X: 10}).
+			SetID("header").SetDisplay(DisplayBlock)
+		for i, col := range c.Header {
+			// TODO: support so columns can take full height available
+			if i == len(c.Header)-1 {
+				headRow.AddChild(NewContainer().SetSize(math.Vec2f32{X: 400}).SetBackgroundColor(color.Transparent).SetID("cell#" + strconv.Itoa(i)).AddChild(NewText(col).SetTextWrapped(true)))
+
+			} else {
+				headRow.AddChild(NewContainer().SetSize(math.Vec2f32{X: 100}).SetBackgroundColor(color.Transparent).SetID("cell#" + strconv.Itoa(i)).AddChild(NewText(col).SetTextWrapped(true)))
+			}
+		}
+		var rows []IComponent
+		for i, row := range c.Rows {
+			newRow := NewContainer().SetID("row#" + strconv.Itoa(i)).SetDisplay(DisplayBlock).SetGap(math.Vec2f32{X: 10})
+
+			for i, cell := range row.Cells {
+				if i == len(row.Cells)-1 {
+					newRow.AddChild(NewContainer().SetSize(math.Vec2f32{X: 400}).SetBackgroundColor(color.Transparent).SetID("cell#" + strconv.Itoa(i)).AddChild(NewText(cell).SetTextWrapped(true)))
+				} else {
+					newRow.AddChild(NewContainer().SetSize(math.Vec2f32{X: 100}).SetBackgroundColor(color.Transparent).SetID("cell#" + strconv.Itoa(i)).AddChild(NewText(cell).SetTextWrapped(true)))
+				}
+			}
+			rows = append(rows, newRow)
+		}
+		t := NewContainer().SetID(c.ID()).
+			SetDisplay(c.Display()).
+			SetSize(c.Size()).
+			SetPosition(c.Pos()).
+			SetBackgroundColor(color.Gray).
+			SetBorder(c.Border()).
+			// SetPadding(*math.NewVec2f32(3, 4)).
+			SetBorderColor(c.BorderColor()).
+			SetBorderRadius(10).
+			SetZIndex(c.AbsoluteZIndex()).
+			SetGap(math.Vec2f32{Y: 10}).
+			SetPadding(math.Vec2f32{X: 3, Y: 4}).
+			AddChild(headRow)
+		t.AddChildren(rows...)
+		return t
+		// TODO: should we draw table column wise?
+	default:
+		panic(fmt.Sprintf("Unsupported component type: %T", comp))
+	}
 }
 
 func (le *LayoutEngine) registerID(fullID string) {
@@ -200,8 +322,8 @@ func (le *LayoutEngine) printComponentTree(comp IComponent, indent string) {
 	}
 	displayStr := comp.ID()
 
-	fmt.Printf("%s[%s: Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Z:%d]\n",
-		indent, displayStr, comp.Size().X, comp.Size().Y,
+	fmt.Printf("%s[%s(%s): Size:%.1f,%.1f Pos:%.1f,%.1f (%v) Z:%d]\n",
+		indent, displayStr, comp.Kind().String(), comp.Size().X, comp.Size().Y,
 		comp.Pos().X, comp.Pos().Y, comp.Pos().Type,
 		comp.AbsoluteZIndex(),
 	)
@@ -222,7 +344,15 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize ma
 		// Skip if component is nil or marked as not displayed.
 		return math.Vec2f32{X: 0, Y: 0}
 	}
-	fixedSize := comp.Size() // User-defined fixed size
+	fixedSize := comp.Size()
+	widthPercent := comp.WidthPercent()
+	heightPercent := comp.HeightPercent()
+	if widthPercent > 0 {
+		fixedSize.X = (availableSize.X - comp.Border().X*2 - comp.Padding().X*2) * widthPercent / 100
+	}
+	if heightPercent > 0 {
+		fixedSize.Y = (availableSize.Y - comp.Border().Y*2 - comp.Padding().Y*2) * heightPercent / 100
+	}
 	hasFixedWidth := fixedSize.X > 0
 	hasFixedHeight := fixedSize.Y > 0
 
@@ -338,15 +468,62 @@ func (le *LayoutEngine) calculateSizeRecursive(comp IComponent, availableSize ma
 		}
 
 	case *Text:
-		// TODO: Font size should ideally come from component style/props
-		fontSize := float32(24.0)
-		// TODO: Padding should ideally come from component style/props
-		// Note: Text usually uses its own padding, not the component's general padding.
-		// Assuming CalculateTextWidth gives raw text width. Add specific text padding if needed.
-		textPadding := float32(0.0) // Example: Add text-specific padding if necessary
-		width := le.CalculateTextWidth(c.Content, fontSize) + 2*textPadding
-		height := fontSize + 2*textPadding // Basic height based on font size
-		calculatedContentSize = math.Vec2f32{X: width, Y: height}
+		// TODO: textPadding should come from style/props
+
+		lineHeight := c.FontSize
+
+		if c.Wrapped {
+			// available width minus any horizontal padding/border
+			maxLineWidth := availableSize.X - 2*paddingAndBorderX
+
+			words := strings.Fields(c.Content)
+			var currentLine strings.Builder
+			var lines []string
+
+			for _, w := range words {
+				testLine := currentLine.String()
+				if testLine != "" {
+					testLine += " " + w
+				} else {
+					testLine = w
+				}
+
+				wWidth := le.CalculateTextWidth(testLine, c.FontSize)
+				if wWidth <= maxLineWidth {
+					if currentLine.Len() > 0 {
+						currentLine.WriteString(" ")
+					}
+					currentLine.WriteString(w)
+				} else {
+					// commit current line, start new
+					lines = append(lines, currentLine.String())
+					currentLine.Reset()
+					currentLine.WriteString(w)
+				}
+			}
+			// last line
+			if currentLine.Len() > 0 {
+				lines = append(lines, currentLine.String())
+			}
+
+			// find widest line
+			var widest float32
+			for _, ln := range lines {
+				w := le.CalculateTextWidth(ln, c.FontSize)
+				if w > widest {
+					widest = w
+				}
+			}
+
+			totalHeight := float32(len(lines)) * lineHeight
+			totalWidth := widest
+
+			calculatedContentSize = math.Vec2f32{X: totalWidth, Y: totalHeight}
+		} else {
+			width := le.CalculateTextWidth(c.Content, c.FontSize)
+			height := c.FontSize
+			calculatedContentSize = math.Vec2f32{X: width, Y: height}
+		}
 
 	case *Button:
 		// Assume button includes internal padding within its calculation logic

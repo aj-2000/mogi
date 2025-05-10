@@ -29,6 +29,7 @@ type Component struct {
 	backgroundColor color.RGBA
 	flexItemProps   FlexItemProps
 	zIndex          int
+	sizePercent     math.Vec2f32
 }
 
 func newComponentBase(kind ComponentKind) Component {
@@ -65,6 +66,12 @@ func (c *Component) FullID() string         { return c.fullID }
 func (c *Component) ID() string             { return c.id }
 func (c *Component) Children() []IComponent { return c.children }
 func (c *Component) ZIndex() int            { return c.zIndex }
+func (c *Component) WidthPercent() float32 {
+	return c.sizePercent.X
+}
+func (c *Component) HeightPercent() float32 {
+	return c.sizePercent.Y
+}
 
 // should we return a copy?
 func (c *Component) FlexItem() *FlexItemProps    { return &c.flexItemProps }
@@ -145,6 +152,24 @@ func (c *Component) setBackgroundColor(color color.Color) {
 }
 func (c *Component) setZIndex(zIndex int) {
 	c.zIndex = zIndex
+}
+func (c *Component) setWidthPercent(widthPercent float32) {
+	if widthPercent < 0 {
+		widthPercent = 0
+	}
+	if widthPercent > 100 {
+		widthPercent = 100
+	}
+	c.sizePercent.X = widthPercent
+}
+func (c *Component) setHeightPercent(heightPercent float32) {
+	if heightPercent < 0 {
+		heightPercent = 0
+	}
+	if heightPercent > 100 {
+		heightPercent = 100
+	}
+	c.sizePercent.Y = heightPercent
 }
 
 // ——————————————————————————————————————————————————————————————————————————————

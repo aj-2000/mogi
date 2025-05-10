@@ -11,6 +11,7 @@ import (
 	"log"
 	"runtime"
 	"sort"
+	"strings"
 	"unsafe"
 
 	"github.com/aj-2000/mogi/color"
@@ -45,6 +46,10 @@ func (app *App) Image(path string) *ui.Image {
 	return ui.NewImage(path)
 }
 
+func (app *App) Table() *ui.Table {
+	return ui.NewTable()
+}
+
 func (app *App) Run(f func(app *App) ui.IComponent) {
 	if app.renderer == nil {
 		log.Fatalln("Renderer is not initialized")
@@ -64,8 +69,7 @@ func (app *App) Run(f func(app *App) ui.IComponent) {
 		app.totalTime += float64(app.deltaTime)
 		app.totalFrames++
 		root := f(app)
-
-		componentRenderer := &ComponentRenderer{Component: root}
+		root = app.le.ConvertDerivedComponentToPrimitivesRecursive(root)
 		app.le.AssignIDsRecursive(root)
 		if app.totalFrames != 1 {
 			// should not run on the first frame
@@ -77,6 +81,7 @@ func (app *App) Run(f func(app *App) ui.IComponent) {
 		app.le.CopyStateFromComponentsRecursive(root)
 
 		app.renderer.clear()
+		componentRenderer := &ComponentRenderer{Component: root}
 		componentRenderer.Render(app)
 		app.renderer.present()
 		app.renderer.handleEvents()
@@ -200,6 +205,19 @@ const (
 	RenderCommandDrawTexture
 )
 
+func (r RenderCommandKind) String() string {
+	switch r {
+	case RenderCommandDrawRectangle:
+		return "RenderCommandDrawRectangle"
+	case RenderCommandDrawText:
+		return "RenderCommandDrawText"
+	case RenderCommandDrawTexture:
+		return "RenderCommandDrawTexture"
+	default:
+		return "RenderCommandNone"
+	}
+}
+
 type RenderCommand struct {
 	Kind            RenderCommandKind
 	Pos             math.Vec2f32
@@ -252,14 +270,80 @@ func (cr *ComponentRenderer) GenerateRenderCommands(app *App) RenderCommandArray
 		})
 
 	case *ui.Text:
-		commands = append(commands, RenderCommand{
-			Kind:     RenderCommandDrawText,
-			Text:     comp.Content,
-			Color:    comp.Color,
-			Pos:      pos,
-			Display:  comp.Display(),
-			FontSize: comp.FontSize,
-			ZIndex:   zIndex})
+		// TODO: style‐driven values (you can pull these from comp.Style instead)
+		fontSize := comp.FontSize
+		paddingAndBorderX := comp.Padding().X + borderWidth.X
+		lineHeight := fontSize
+
+		if comp.Wrapped {
+			// 1) figure out max width for each line
+			// TODO: fix this bug (why we need to subtract 20?)
+			maxLineWidth := size.X - 2*paddingAndBorderX
+
+			// 2) break into words and greedily fill lines
+			words := strings.Fields(comp.Content)
+			var lines []string
+			var curr strings.Builder
+
+			for _, w := range words {
+				test := curr.String()
+				if test != "" {
+					test += " " + w
+				} else {
+					test = w
+				}
+
+				if app.le.CalculateTextWidth(test, fontSize) <= maxLineWidth {
+					if curr.Len() > 0 {
+						curr.WriteString(" ")
+					}
+					curr.WriteString(w)
+				} else {
+					lines = append(lines, curr.String())
+					curr.Reset()
+					curr.WriteString(w)
+				}
+			}
+			if curr.Len() > 0 {
+				lines = append(lines, curr.String())
+			}
+
+			// 3) compute wrapped block size
+			var widest float32
+			for _, line := range lines {
+				w := app.le.CalculateTextWidth(line, fontSize)
+				if w > widest {
+					widest = w
+				}
+			}
+
+			// 4) emit one draw‐text command per line
+			for i, line := range lines {
+				linePos := pos.Clone().Add(math.Vec2f32{
+					Y: float32(i) * lineHeight,
+				})
+				commands = append(commands, RenderCommand{
+					Kind:     RenderCommandDrawText,
+					Text:     line,
+					Color:    comp.Color,
+					Pos:      *linePos,
+					Display:  comp.Display(),
+					FontSize: fontSize,
+					ZIndex:   zIndex,
+				})
+			}
+
+		} else {
+			commands = append(commands, RenderCommand{
+				Kind:     RenderCommandDrawText,
+				Text:     comp.Content,
+				Color:    comp.Color,
+				Pos:      pos,
+				Display:  comp.Display(),
+				FontSize: fontSize,
+				ZIndex:   zIndex,
+			})
+		}
 
 	case *ui.Button:
 		if comp.IsPressed {
@@ -324,6 +408,11 @@ func (cr *ComponentRenderer) GenerateRenderCommands(app *App) RenderCommandArray
 
 func (cr *ComponentRenderer) Render(app *App) {
 	commands := cr.GenerateRenderCommands(app)
+	//print commands
+	log.Printf("RenderCommands: %d\n", len(commands))
+	// for _, command := range commands {
+	// 	log.Printf("RenderCommand: %+v\n", command)
+	// }
 	// Sort commands by ZIndex
 	sort.Slice(commands, func(i, j int) bool {
 		return commands[i].ZIndex < commands[j].ZIndex

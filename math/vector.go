@@ -188,6 +188,10 @@ func (v *Vec2f32) Normalize() *Vec2f32 {
 	return v
 }
 
+func (v *Vec2f32) Clone() *Vec2f32 {
+	return &Vec2f32{X: v.X, Y: v.Y}
+}
+
 func (v *Vec2f32) ToVec2() Vec2 {
 	return Vec2{float64(v.X), float64(v.Y)}
 }
@@ -242,6 +246,10 @@ func (v *Vec3f32) Normalize() *Vec3f32 {
 	return v
 }
 
+func (v *Vec3f32) Clone() *Vec3f32 {
+	return &Vec3f32{X: v.X, Y: v.Y, Z: v.Z}
+}
+
 func (v *Vec3f32) ToVec3() Vec3 {
 	return Vec3{float64(v.X), float64(v.Y), float64(v.Z)}
 }
@@ -291,6 +299,10 @@ func (v *Vec4f32) Normalize() *Vec4f32 {
 		v.W /= n
 	}
 	return v
+}
+
+func (v *Vec4f32) Clone() *Vec4f32 {
+	return &Vec4f32{X: v.X, Y: v.Y, Z: v.Z, W: v.W}
 }
 
 func (v *Vec4f32) ToVec4() Vec4 {

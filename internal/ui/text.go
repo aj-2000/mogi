@@ -14,13 +14,14 @@ type Text struct {
 	Content  string
 	Color    color.RGBA
 	FontSize float32
+	Wrapped  bool
 }
 
 func NewText(content string) *Text {
 	t := &Text{
 		Component: newComponentBase(TextKind),
 		Content:   content,
-		Color:     color.Black, // Default black
+		Color:     color.White, // Default black
 		FontSize:  16.0,        // Default font size
 	}
 	return t
@@ -100,5 +101,10 @@ func (t *Text) SetOrder(order int) *Text {
 
 func (t *Text) SetZIndex(zIndex int) *Text {
 	t.Component.setZIndex(zIndex)
+	return t
+}
+
+func (t *Text) SetTextWrapped(wrapped bool) *Text {
+	t.Wrapped = wrapped
 	return t
 }

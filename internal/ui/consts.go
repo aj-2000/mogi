@@ -53,6 +53,7 @@ const (
 	TextKind
 	ButtonKind
 	ImageKind
+	TableKind
 )
 
 func (k ComponentKind) String() string {
@@ -65,6 +66,8 @@ func (k ComponentKind) String() string {
 		return "Button"
 	case ImageKind:
 		return "Image"
+	case TableKind:
+		return "Table"
 	default:
 		return "Unknown"
 	}

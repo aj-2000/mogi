@@ -85,6 +85,26 @@ func (c *Container) SetZIndex(zIndex int) *Container {
 	return c
 }
 
+func (c *Container) SetWidthPercent(widthPercent float32) *Container {
+	c.Component.setWidthPercent(widthPercent)
+	return c
+}
+
+func (c *Container) SetHeightPercent(heightPercent float32) *Container {
+	c.Component.setHeightPercent(heightPercent)
+	return c
+}
+
+func (c *Container) SetChildren(children ...IComponent) *Container {
+	// Clear existing children
+	c.children = nil
+	// Add new children
+	for _, child := range children {
+		c.AddChild(child)
+	}
+	return c
+}
+
 // --- Fluent Setters for Container Flex Item Properties ---
 // These allow a Container to act as a flex item within another container
 

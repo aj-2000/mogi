@@ -29,6 +29,10 @@ type IComponent interface {
 	Display() Display
 	IsPointInsideComponent(point math.Vec2f32) bool
 	ZIndex() int
+	WidthPercent() float32
+	HeightPercent() float32
+
+	// --- Fluent Setters ---
 
 	// --- Internal Setters (used by layout engine) ---
 	// These need to be part of the interface if the layout engine
@@ -47,6 +51,8 @@ type IComponent interface {
 	setID(id string)
 	setFullID(fullID string)
 	setZIndex(zIndex int)
+	setWidthPercent(widthPercent float32)
+	setHeightPercent(heightPercent float32)
 	// Optional: Method to get intrinsic size (needed for flex-basis: auto)
 	// CalculateIntrinsicSize(available math.Vec2f32 ) math.Vec2f32
 }

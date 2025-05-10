@@ -94,7 +94,7 @@ func main() {
 				flag = true
 			}
 
-			tabs := app.Container().
+			_ = app.Container().
 				SetID("tabs").
 				SetBackgroundColor(color.Magenta).
 				SetBorderRadius(5).
@@ -102,6 +102,8 @@ func main() {
 				AddChildren(
 					app.Container().
 						SetID("tab_bar").
+						// TODO: fix percent precendence
+						SetWidthPercent(100).
 						SetZIndex(999).
 						SetBackgroundColor(color.Gray).
 						SetBorderRadius(5).
@@ -156,33 +158,74 @@ func main() {
 				)
 
 			bgColor := color.Transparent
-			cursorSize := float32(30)
-			cursorSize1 := float32(25)
+			// cursorSize := float32(30)
+			// cursorSize1 := float32(25)
 
-			mousePos := app.GetMousePos()
+			// mousePos := app.GetMousePos()
+			rows := []ui.Row{
+				{
+					Cells: []string{"India", "1,450,000", "4,614", "4,730", "2,182", "5,500", "2,820", "42,000", "6,464", "India maintains a large and diverse military force, with significant investments in aircraft and armored vehicles. It continues to modernize its capabilities."},
+				},
+				{
+					Cells: []string{"Russia", "1,014,000", "13,132", "4,182", "1,531", "4,173", "1,511", "13,000", "4,173", "Russia possesses extensive military hardware, particularly in aircraft and tanks, reflecting its historical emphasis on armored and air superiority."},
+				},
+				{
+					Cells: []string{"China", "2,035,000", "5,250", "3,285", "1,250", "3,285", "1,250", "5,250", "3,285", "China's military is rapidly expanding and modernizing, with a strong focus on air power and technological advancements in defense."},
+				},
+				{
+					Cells: []string{"USA", "1,390,000", "13,300", "6,287", "5,550", "6,287", "5,550", "13,300", "6,287", "The USA maintains one of the most technologically advanced and powerful militaries globally, with extensive air and armored capabilities."},
+				},
+				{
+					Cells: []string{"Pakistan", "654,000", "1,500", "1,200", "1,200", "1,200", "1,200", "2,000", "1,200", "Pakistan's military is focused on regional defense and has a significant number of aircraft and armored vehicles."},
+				},
+			}
+
+			table := app.Table().
+				SetID("table").
+				SetHeader([]string{
+					"Country",
+					"Active Personnel",
+					"Total Aircraft",
+					"Fighter Aircraft",
+					"Attack Aircraft",
+					"Helicopters",
+					"Attack Helicopters",
+					"Combat Tanks",
+					"Self-Propelled Artillery",
+					"Summary",
+				}).
+				SetBackgroundColor(color.Red).
+				AddRows(rows)
 			r := app.Container().
 				SetID("app_container").
 				SetBackgroundColor(bgColor).
 				AddChildren( // Add all children at once
-					tabs,
-					examples.FPSCounterComponent(app),
-					app.Container().
-						SetID("mouse_pos").
-						SetZIndex(10001).
-						SetBackgroundColor(color.Orange).
-						SetBorderRadius(cursorSize/2).
-						SetSize(math.Vec2f32{X: cursorSize, Y: cursorSize}).
-						SetPosition(ui.Position{X: mousePos.X - (cursorSize / 2), Y: mousePos.Y - (cursorSize / 2), Type: ui.PositionTypeAbsolute}),
-					app.Container().
-						SetID("mouse_pos1").
-						SetZIndex(10001).
-						SetBackgroundColor(color.Cyan).
-						SetBorderRadius(cursorSize1/2).
-						SetSize(math.Vec2f32{X: cursorSize1, Y: cursorSize1}).
-						SetPosition(ui.Position{X: mousePos.X - (cursorSize1 / 2), Y: mousePos.Y - (cursorSize1 / 2), Type: ui.PositionTypeAbsolute}),
+					// examples.FPSCounterComponent(app),
+					// app.Container().
+					// 	SetID("mouse_pos").
+					// 	SetZIndex(10001).
+					// 	SetBackgroundColor(color.Orange).
+					// 	SetBorderRadius(cursorSize/2).
+					// 	SetSize(math.Vec2f32{X: cursorSize, Y: cursorSize}).
+					// 	SetPosition(ui.Position{X: mousePos.X - (cursorSize / 2), Y: mousePos.Y - (cursorSize / 2), Type: ui.PositionTypeAbsolute}),
+					// app.Container().
+					// 	SetID("mouse_pos1").
+					// 	SetZIndex(10001).
+					// 	SetBackgroundColor(color.Cyan).
+					// 	SetBorderRadius(cursorSize1/2).
+					// 	SetSize(math.Vec2f32{X: cursorSize1, Y: cursorSize1}).
+					// 	SetPosition(ui.Position{X: mousePos.X - (cursorSize1 / 2), Y: mousePos.Y - (cursorSize1 / 2), Type: ui.PositionTypeAbsolute}),
+					// tabs,
+					table,
+					// app.Text("Lorem Ipsum is simply dummy text of the printing and typesetting industry.").
+					// 	SetColor(color.Red).
+					// 	SetTextWrapped(true),
+
+				// table,
 				).
 				SetMargin(math.Vec2f32{X: 3, Y: 3}).
 				SetPadding(math.Vec2f32{X: 4, Y: 4})
+				// SetSize(math.Vec2f32{X: 120, Y: 200})
 
 			return r
 		})
